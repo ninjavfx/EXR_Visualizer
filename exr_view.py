@@ -386,8 +386,21 @@ def display_image(img_rgb: np.ndarray, half: bool) -> None:
     disp_u8 = (disp * 255.0 + 0.5).astype(np.uint8)
     disp_bgr = disp_u8[:, :, ::-1]
 
-    cv2.imshow("EXR Visualizer", disp_bgr)
-    cv2.waitKey(0)
+    window_name = "EXR Visualizer"
+    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    cv2.imshow(window_name, disp_bgr)
+
+    # Ignore unrelated key presses (e.g. Linux Super/Win key combos).
+    # Exit only on explicit close keys or if the window is closed.
+    while True:
+        visible = cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE)
+        if visible < 1:
+            break
+
+        key = cv2.waitKeyEx(50)
+        if key in (27, 13, ord("q"), ord("Q")):  # Esc, Enter, q, Q
+            break
+
     cv2.destroyAllWindows()
 
 

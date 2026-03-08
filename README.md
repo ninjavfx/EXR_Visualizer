@@ -59,3 +59,11 @@ python3 exr_view.py /path/to/image.exr -X -Y --save output.png --no-display
 The script looks for:
 - `./.luts`
 - fallback: `./LUT/.luts`
+
+## Viewer controls
+
+In display mode, the window closes on:
+- `q`
+- `Esc`
+- `Enter`
+- Window close button
