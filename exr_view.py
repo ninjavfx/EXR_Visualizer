@@ -18,6 +18,9 @@ from typing import Optional, Tuple
 
 import numpy as np
 
+# Helps OpenCV EXR IO on builds where this backend is opt-in.
+os.environ.setdefault("OPENCV_IO_ENABLE_OPENEXR", "1")
+
 
 # Optional imports are checked at runtime with clear errors.
 try:
@@ -159,6 +162,42 @@ def load_exr(path: str) -> np.ndarray:
     except ImportError:
         pass
 
+    # Fallback: OpenEXR python bindings (portable across many macOS/Linux setups).
+    try:
+        import Imath  # type: ignore
+        import OpenEXR  # type: ignore
+
+        exr = OpenEXR.InputFile(path)
+        header = exr.header()
+        data_window = header["dataWindow"]
+        width = data_window.max.x - data_window.min.x + 1
+        height = data_window.max.y - data_window.min.y + 1
+        channels = header["channels"].keys()
+
+        pix_type = Imath.PixelType(Imath.PixelType.FLOAT)
+
+        def read_channel(channel_name: str) -> np.ndarray:
+            raw = exr.channel(channel_name, pix_type)
+            return np.frombuffer(raw, dtype=np.float32).reshape(height, width)
+
+        if {"R", "G", "B"}.issubset(channels):
+            r = read_channel("R")
+            g = read_channel("G")
+            b = read_channel("B")
+        else:
+            # If RGB labels are absent, use first 3 channels in header order.
+            ordered = list(channels)
+            if len(ordered) < 3:
+                fail("EXR has fewer than 3 channels; RGB required")
+            c0 = read_channel(ordered[0])
+            c1 = read_channel(ordered[1])
+            c2 = read_channel(ordered[2])
+            r, g, b = c0, c1, c2
+
+        return np.stack([r, g, b], axis=-1).astype(np.float32, copy=False)
+    except ImportError:
+        pass
+
     # Fallback: OpenCV with OpenEXR support enabled.
     if cv2 is not None:
         img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
@@ -172,7 +211,8 @@ def load_exr(path: str) -> np.ndarray:
             return img.astype(np.float32, copy=False)
 
     fail(
-        "Could not read EXR. Install OpenImageIO (preferred) or OpenCV with OpenEXR support."
+        "Could not read EXR. Install OpenImageIO, OpenEXR python bindings, "
+        "or OpenCV with OpenEXR support."
     )
 
 
@@ -260,7 +300,7 @@ def apply_cdl(
 
 def build_file_processor(lut_path: str):
     if ocio is None:
-        fail("PyOpenColorIO is required. Install with: pip install PyOpenColorIO")
+        fail("PyOpenColorIO is required. Install with: pip install OpenColorIO")
 
     transform = ocio.FileTransform(src=lut_path)
     config = ocio.Config.CreateRaw()

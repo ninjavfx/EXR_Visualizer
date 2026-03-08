@@ -18,6 +18,20 @@ uv venv --python 3.11 .venv
 uv pip install -r requirements.txt
 ```
 
+### Quick macOS install
+
+```bash
+cd /path/to/EXR_Visualizer
+curl -LsSf https://astral.sh/uv/install.sh | sh
+~/.local/bin/uv venv --python 3.11 .venv
+~/.local/bin/uv pip install -r requirements.txt
+```
+
+If Finder blocks terminal GUI windows, run headless with:
+```bash
+.venv/bin/python exr_view.py /path/to/image.exr --save /tmp/output.png --no-display
+```
+
 ## Run
 
 ```bash
