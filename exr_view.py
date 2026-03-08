@@ -41,7 +41,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--half",
         action="store_true",
-        help="Scale displayed image to 50%",
+        help="Scale displayed image to 50%%",
     )
     parser.add_argument(
         "-X",
