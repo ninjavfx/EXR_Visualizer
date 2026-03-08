@@ -41,6 +41,20 @@ def parse_args() -> argparse.Namespace:
         help="Scale displayed image to 50%",
     )
     parser.add_argument(
+        "-X",
+        "-x",
+        dest="flop_x",
+        action="store_true",
+        help="Flop image horizontally",
+    )
+    parser.add_argument(
+        "-Y",
+        "-y",
+        dest="flip_y",
+        action="store_true",
+        help="Flip image vertically",
+    )
+    parser.add_argument(
         "--save",
         metavar="OUTPUT_PATH",
         help="Save processed image to file (e.g. output.png, output.jpg, output.exr)",
@@ -306,6 +320,15 @@ def save_image(img_rgb: np.ndarray, output_path: str, half: bool) -> None:
     print(f"Saved image: {output_path}")
 
 
+def apply_orientation(img_rgb: np.ndarray, flop_x: bool, flip_y: bool) -> np.ndarray:
+    out = img_rgb
+    if flop_x:
+        out = out[:, ::-1, :]
+    if flip_y:
+        out = out[::-1, :, :]
+    return np.ascontiguousarray(out)
+
+
 def main() -> None:
     args = parse_args()
     exr_path = os.path.abspath(args.exr_path)
@@ -336,6 +359,7 @@ def main() -> None:
 
     # 3) Apply output LUT to display space
     img = apply_ocio_processor(img, out_proc)
+    img = apply_orientation(img, args.flop_x, args.flip_y)
 
     if args.save:
         save_image(img, os.path.abspath(args.save), args.half)

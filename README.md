@@ -24,6 +24,7 @@ uv pip install -r requirements.txt
 python3 exr_view.py /path/to/image.exr
 python3 exr_view.py /path/to/image.exr --half
 python3 exr_view.py /path/to/image.exr --save output.png --no-display
+python3 exr_view.py /path/to/image.exr -X -Y --save output.png --no-display
 ```
 
 ## `.luts` location

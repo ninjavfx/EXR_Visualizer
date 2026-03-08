@@ -29,12 +29,15 @@ This project currently prioritizes practical viewing/output over framework compl
 Current arguments:
 - `exr_path` (required): path to EXR file.
 - `--half`: scale output dimensions to 50%.
+- `-X` or `-x`: flop image horizontally.
+- `-Y` or `-y`: flip image vertically.
 - `--save OUTPUT_PATH`: save processed result (`.png`, `.jpg`, `.exr`, etc.).
 - `--no-display`: skip OpenCV window display.
 
 Behavior notes:
 - If `--save` and display enabled, image is both saved and shown.
 - `--half` affects both save and display outputs.
+- `-X/-x` and `-Y/-y` affect both save and display outputs.
 - For non-EXR save formats: output is clamped to `[0,1]` and written as 8-bit.
 - For `.exr` save: output is written as float32.
 
@@ -94,6 +97,7 @@ Run examples:
 .venv/bin/python exr_view.py /path/to/image.exr
 .venv/bin/python exr_view.py /path/to/image.exr --half
 .venv/bin/python exr_view.py /path/to/image.exr --save /tmp/output.png --no-display
+.venv/bin/python exr_view.py /path/to/image.exr -X -Y --save /tmp/output.png --no-display
 ```
 
 ## Verified Runtime Example
