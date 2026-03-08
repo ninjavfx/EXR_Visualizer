@@ -42,7 +42,8 @@ run with a system font dir:
 QT_QPA_FONTDIR=/usr/share/fonts/truetype/dejavu python3 exr_view.py /path/to/image.exr
 ```
 
-The script now auto-detects common Linux font directories, but this manual override is still available.
+The script now auto-detects common Linux font directories and also tries to bootstrap
+`cv2/qt/fonts` from system DejaVu fonts automatically. The manual override is still available.
 
 ## Run
 

@@ -57,6 +57,40 @@ except Exception:  # pragma: no cover - environment-dependent
     cv2 = None
 
 
+def bootstrap_opencv_qt_fonts() -> None:
+    """Populate cv2/qt/fonts from system fonts when OpenCV wheel lacks bundled fonts."""
+    if cv2 is None or not sys.platform.startswith("linux"):
+        return
+
+    cv2_dir = os.path.dirname(getattr(cv2, "__file__", ""))
+    if not cv2_dir:
+        return
+
+    qt_fonts_dir = os.path.join(cv2_dir, "qt", "fonts")
+    if os.path.isdir(qt_fonts_dir) and os.listdir(qt_fonts_dir):
+        return
+
+    source_fonts = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+    ]
+    src_font = next((p for p in source_fonts if os.path.isfile(p)), None)
+    if not src_font:
+        return
+
+    try:
+        os.makedirs(qt_fonts_dir, exist_ok=True)
+        dst_font = os.path.join(qt_fonts_dir, "DejaVuSans.ttf")
+        if not os.path.exists(dst_font):
+            os.symlink(src_font, dst_font)
+    except OSError:
+        # Non-fatal; display may still work through system fontconfig.
+        return
+
+
+bootstrap_opencv_qt_fonts()
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Display EXR with LUT/CDL pipeline")
     parser.add_argument("exr_path", help="Path to EXR image")
