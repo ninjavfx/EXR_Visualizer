@@ -14,6 +14,7 @@ When starting a new Codex session in this repo, read files in this order:
 Then check git state:
 - `git status --short`
 - `git log --oneline -n 8`
+- `ls -la LUT && cat LUT/.luts` (confirm active LUT config/assets)
 
 ## Project Conventions
 - Keep the color pipeline order unchanged unless explicitly requested:
@@ -41,6 +42,7 @@ Then check git state:
 - Linux font/Qt behavior is handled in code (`configure_linux_qt_fontdir`, `bootstrap_opencv_qt_fonts`).
 - Arch Linux-specific font path `/usr/share/fonts/TTF` is intentionally included.
 - Viewer window should close only on `q`, `Esc`, `Enter`, or window close button.
+- `bootstrap_opencv_qt_fonts` writes into `site-packages/cv2/qt/fonts` when possible; if the environment is not writable, use `QT_QPA_FONTDIR` override.
 
 ## Memory File Maintenance (Required)
 After meaningful code/doc changes, update these files:

@@ -12,6 +12,7 @@
 - Add non-interactive regression test command(s) to README for Linux/macOS.
 - Improve OpenEXR fallback robustness for channel naming edge cases beyond `R/G/B`.
 - Add explicit return codes/messages for common dependency-missing scenarios.
+- Add a small smoke-test script that validates Linux Qt font fallback behavior in display mode.
 
 ## P2 (Nice to Have)
 - Add batch mode for image sequences/folders.

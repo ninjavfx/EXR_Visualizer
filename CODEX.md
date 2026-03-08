@@ -111,6 +111,8 @@ Linux note:
 - Candidate font directories include:
   `/usr/share/fonts/truetype/dejavu`, `/usr/share/fonts/TTF`, `/usr/share/fonts/dejavu`,
   `/usr/share/fonts/truetype/freefont`, `/usr/share/fonts`.
+- If `site-packages/cv2/qt/fonts` is not writable, bootstrap may be skipped; use manual
+  `QT_QPA_FONTDIR` override in that case.
 
 ## Verified Runtime Example
 Validated command:
@@ -137,6 +139,7 @@ Also validated `--half` save dimensions:
 - No explicit OCIO config workflow (using file transforms only).
 - No channel/layer selection for multichannel EXRs.
 - OpenEXR fallback currently expects `Imath` + `OpenEXR` Python bindings.
+- Linux Qt font bootstrap depends on write access to the installed `cv2` package path.
 
 ## Change Guidelines for Future Sessions
 - Preserve CLI backwards compatibility unless user requests changes.

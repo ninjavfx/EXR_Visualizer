@@ -15,6 +15,7 @@
   - `QT_QPA_FONTDIR` auto-detection
   - `cv2/qt/fonts` bootstrap from system DejaVu
   - Arch font path candidate `/usr/share/fonts/TTF`
+  - non-exit behavior for Super/Win-key interactions in display window
 - Updated README and CODEX documentation accordingly.
 
 ## Files Changed in This Session
@@ -35,4 +36,5 @@
 ## Recommended Next Steps
 1. Add automated tests for parser/discovery/pipeline/orientation behavior.
 2. Add CI check for at least syntax + basic CLI smoke tests.
-3. Keep docs in sync when CLI or platform behavior changes.
+3. Add a Linux display smoke test that verifies font fallback and window key behavior.
+4. Keep docs in sync when CLI or platform behavior changes.

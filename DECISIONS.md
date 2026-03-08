@@ -33,6 +33,7 @@
 ### 2026-03-08: Linux Qt font mitigation
 - Decision: auto-set `QT_QPA_FONTDIR`, bootstrap `cv2/qt/fonts`, include Arch path `/usr/share/fonts/TTF`.
 - Why: address OpenCV Qt font warnings/errors on Linux distros.
+- Note: bootstrap is best-effort; manual `QT_QPA_FONTDIR` remains the fallback when package paths are read-only.
 
 ### 2026-03-08: Standardize on `uv` + Python 3.11
 - Decision: recommend `uv venv --python 3.11` for environment setup.
