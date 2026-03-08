@@ -19,8 +19,9 @@ This project currently prioritizes practical viewing/output over framework compl
 
 ### Functional blocks
 - `parse_args()`: CLI contract.
+- `configure_linux_qt_fontdir()`, `bootstrap_opencv_qt_fonts()`: Linux Qt/OpenCV font compatibility.
 - `find_luts_config()`, `parse_luts_config()`: LUT config discovery and path resolution.
-- `load_exr()`: EXR loading (OpenImageIO first, OpenCV fallback).
+- `load_exr()`: EXR loading (OpenImageIO first, OpenEXR fallback, OpenCV fallback).
 - `find_ccc()`, `parse_ccc()`, `apply_cdl()`: CDL discovery and application.
 - `build_file_processor()`, `apply_ocio_processor()`: OCIO file transform processing.
 - `save_image()`, `display_image()`: output operations.
@@ -38,6 +39,7 @@ Behavior notes:
 - If `--save` and display enabled, image is both saved and shown.
 - `--half` affects both save and display outputs.
 - `-X/-x` and `-Y/-y` affect both save and display outputs.
+- Viewer closes on `q`, `Esc`, `Enter`, or window close button (not on arbitrary keypresses).
 - For non-EXR save formats: output is clamped to `[0,1]` and written as 8-bit.
 - For `.exr` save: output is written as float32.
 
@@ -82,6 +84,7 @@ Packages in `requirements.txt`:
 - `opencv-python`
 - `OpenColorIO`
 - `OpenImageIO`
+- `OpenEXR`
 
 Important packaging detail:
 - Import name is `PyOpenColorIO`, but pip package name is `OpenColorIO`.
@@ -99,6 +102,13 @@ Run examples:
 .venv/bin/python exr_view.py /path/to/image.exr --save /tmp/output.png --no-display
 .venv/bin/python exr_view.py /path/to/image.exr -X -Y --save /tmp/output.png --no-display
 ```
+
+Linux note:
+- The script auto-configures Qt font dirs (`QT_QPA_FONTDIR`) and tries to bootstrap
+  `cv2/qt/fonts` from system DejaVu fonts.
+- Candidate font directories include:
+  `/usr/share/fonts/truetype/dejavu`, `/usr/share/fonts/TTF`, `/usr/share/fonts/dejavu`,
+  `/usr/share/fonts/truetype/freefont`, `/usr/share/fonts`.
 
 ## Verified Runtime Example
 Validated command:
@@ -124,7 +134,7 @@ Also validated `--half` save dimensions:
 - No EXR sequence/batch mode.
 - No explicit OCIO config workflow (using file transforms only).
 - No channel/layer selection for multichannel EXRs.
-- Current error message in `build_file_processor()` references `pip install PyOpenColorIO`; package name should be `OpenColorIO` if you touch that area.
+- OpenEXR fallback currently expects `Imath` + `OpenEXR` Python bindings.
 
 ## Change Guidelines for Future Sessions
 - Preserve CLI backwards compatibility unless user requests changes.
@@ -141,6 +151,8 @@ Also validated `--half` save dimensions:
 5. No `.ccc` case prints `CDL not found` and still renders.
 6. `--half` on/off with save output dimension checks.
 7. Display path (without `--no-display`) on a GUI-capable machine.
+8. Linux Qt font path behavior with missing `cv2/qt/fonts`.
+9. Linux interactive move/resize with Super/Win key while viewer stays open.
 
 ## Key Files
 - `exr_view.py`
