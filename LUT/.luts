@@ -1,0 +1,2 @@
+in_lut = ./LUT/Linear_to_SLog3.csp
+out_lut = ./LUT/RECS_Rec709.cube
