@@ -31,6 +31,7 @@ def configure_linux_qt_fontdir() -> None:
 
     candidates = [
         "/usr/share/fonts/truetype/dejavu",
+        "/usr/share/fonts/TTF",
         "/usr/share/fonts/dejavu",
         "/usr/share/fonts/truetype/freefont",
         "/usr/share/fonts",
