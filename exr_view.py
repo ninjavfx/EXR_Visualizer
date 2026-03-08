@@ -22,6 +22,28 @@ import numpy as np
 os.environ.setdefault("OPENCV_IO_ENABLE_OPENEXR", "1")
 
 
+def configure_linux_qt_fontdir() -> None:
+    """Avoid Qt font warnings with some OpenCV Linux wheels."""
+    if not sys.platform.startswith("linux"):
+        return
+    if os.environ.get("QT_QPA_FONTDIR"):
+        return
+
+    candidates = [
+        "/usr/share/fonts/truetype/dejavu",
+        "/usr/share/fonts/dejavu",
+        "/usr/share/fonts/truetype/freefont",
+        "/usr/share/fonts",
+    ]
+    for path in candidates:
+        if os.path.isdir(path):
+            os.environ["QT_QPA_FONTDIR"] = path
+            break
+
+
+configure_linux_qt_fontdir()
+
+
 # Optional imports are checked at runtime with clear errors.
 try:
     import PyOpenColorIO as ocio

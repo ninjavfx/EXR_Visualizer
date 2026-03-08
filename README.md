@@ -32,6 +32,18 @@ If Finder blocks terminal GUI windows, run headless with:
 .venv/bin/python exr_view.py /path/to/image.exr --save /tmp/output.png --no-display
 ```
 
+### Linux Qt font warning (OpenCV window mode)
+
+If you see:
+`QFontDatabase: Cannot find font directory .../cv2/qt/fonts`
+
+run with a system font dir:
+```bash
+QT_QPA_FONTDIR=/usr/share/fonts/truetype/dejavu python3 exr_view.py /path/to/image.exr
+```
+
+The script now auto-detects common Linux font directories, but this manual override is still available.
+
 ## Run
 
 ```bash
