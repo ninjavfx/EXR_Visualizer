@@ -12,6 +12,8 @@ This project currently prioritizes practical viewing/output over framework compl
 - Git repo initialized and connected to GitHub via SSH remote.
 - Primary implementation is in a single script: `exr_view.py`.
 - Tested end-to-end on 2026-03-08 with a production EXR and discovered CDL.
+- Linux viewer/font issues encountered in this session were addressed in code.
+- Project memory files are present: `AGENTS.md`, `TASKS.md`, `DECISIONS.md`, `.codex/session.md`.
 
 ## High-Level Architecture
 ### Main entry point
@@ -159,6 +161,10 @@ Also validated `--half` save dimensions:
 - `requirements.txt`
 - `README.md`
 - `CODEX.md`
+- `AGENTS.md`
+- `TASKS.md`
+- `DECISIONS.md`
+- `.codex/session.md`
 - `LUT/.luts`
 - `LUT/Linear_to_SLog3.csp`
 - `LUT/RECS_Rec709.cube`
