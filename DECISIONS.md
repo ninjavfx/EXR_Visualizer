@@ -56,3 +56,9 @@
 - Decision: add `-threads/--threads` for sequence caching with a default of `1`, and recommend `2` or `4` for local NVMe-backed sequences.
 - Why: parallel EXR read and processing can reduce cache time on fast local storage while preserving deterministic frame order in playback.
 - Note: each worker builds its own OCIO processors to avoid sharing processor instances across threads.
+
+### 2026-03-27: Split implementation into focused modules and resolve EXR loader once
+- Decision: keep `exr_view.py` as the entrypoint but move CLI, shared failure handling, EXR I/O, color pipeline logic, and sequence playback into separate modules.
+- Why: the single script had grown large enough that sequence state, playback logic, I/O, and color processing were becoming harder to reason about and extend safely.
+- Decision: resolve the active EXR loading backend once at import time instead of checking loader availability on every frame.
+- Why: removes repeated per-frame backend selection overhead, especially during sequence caching.

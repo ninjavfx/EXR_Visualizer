@@ -18,6 +18,8 @@
 - Added sequence transport controls: `Space` play/pause and `,` / `.` frame stepping.
 - Reduced sequence cache overhead by reusing parsed CDL data and replacing per-frame cache logs with coarse progress updates.
 - Added optional threaded sequence caching with `-threads`, defaulting to `1` and targeting `2` or `4` for local NVMe reads.
+- Split the implementation into `cli.py`, `common.py`, `exr_io.py`, `color_pipeline.py`, and `sequence_playback.py` while keeping `exr_view.py` as the entrypoint.
+- Resolved the EXR loader backend once at import time and changed sequence discovery to `os.scandir()`.
 - Fixed help behavior (`-h/--help`) while keeping flop flags unchanged.
 - Added OpenEXR fallback loading and corrected dependency packaging details.
 - Added Linux-specific Qt font compatibility fixes:
@@ -29,6 +31,11 @@
 
 ## Files Changed in This Session
 - `exr_view.py`
+- `cli.py`
+- `common.py`
+- `exr_io.py`
+- `color_pipeline.py`
+- `sequence_playback.py`
 - `README.md`
 - `CODEX.md`
 - `DECISIONS.md`

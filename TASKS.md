@@ -20,7 +20,6 @@
 
 ## P2 (Nice to Have)
 - Add optional output color metadata/report in stdout.
-- Consider modularizing `exr_view.py` if functionality grows substantially.
 
 ## Done Recently (Not TODO)
 - Added save/headless mode (`--save`, `--no-display`).
@@ -30,6 +29,8 @@
 - Added basic sequence transport controls for play/pause and frame stepping.
 - Reduced sequence cache overhead by reusing parsed CDL data and trimming per-frame logging.
 - Added optional threaded sequence caching with `-threads`.
+- Split the implementation into focused modules while keeping `exr_view.py` as the entrypoint.
+- Resolved the active EXR loader once and switched sequence discovery to `os.scandir()`.
 - Fixed argparse help issue with `%` in help text.
 - Added Linux Qt font handling and OpenCV `cv2/qt/fonts` bootstrap.
 - Added Arch Linux font candidate `/usr/share/fonts/TTF`.

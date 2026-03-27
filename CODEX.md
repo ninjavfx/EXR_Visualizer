@@ -10,7 +10,7 @@ This project currently prioritizes practical viewing/output over framework compl
 
 ## Repository Status
 - Git repo initialized and connected to GitHub via SSH remote.
-- Primary implementation is in a single script: `exr_view.py`.
+- `exr_view.py` remains the CLI entrypoint, with implementation split across focused modules.
 - Tested end-to-end on 2026-03-08 with a production EXR and discovered CDL.
 - Linux viewer/font issues encountered in this session were addressed in code.
 - Sequence playback was added for EXR file patterns addressed by trailing-dot prefixes.
@@ -21,15 +21,16 @@ This project currently prioritizes practical viewing/output over framework compl
 - `exr_view.py` -> `main()` orchestrates CLI, discovery, processing, save/display.
 
 ### Functional blocks
-- `parse_args()`: CLI contract.
-- `configure_linux_qt_fontdir()`, `bootstrap_opencv_qt_fonts()`: Linux Qt/OpenCV font compatibility.
-- `find_luts_config()`, `parse_luts_config()`: LUT config discovery and path resolution.
-- `load_exr()`: EXR loading (OpenImageIO first, OpenEXR fallback, OpenCV fallback).
-- `parse_frame_range()`, `resolve_sequence_frames()`: sequence CLI parsing and frame discovery.
-- `find_ccc()`, `parse_ccc()`, `apply_cdl()`: CDL discovery and application.
-- `build_file_processor()`, `apply_ocio_processor()`: OCIO file transform processing.
-- `process_frame()`: per-frame LUT/CDL/orientation processing.
-- `save_image()`, `display_image()`, `play_sequence()`: output operations.
+- `cli.py`: CLI argument parsing.
+- `common.py`: shared failure helper.
+- `exr_io.py`: Linux/OpenCV bootstrap, EXR loading, save/display conversion.
+- `color_pipeline.py`: LUT config, CDL parsing/application, OCIO processing, per-frame processing.
+- `sequence_playback.py`: sequence discovery, threaded cache state, playback loop.
+
+### EXR loading strategy
+- EXR backend selection is resolved once at import time in `exr_io.py`.
+- Active loader preference remains: OpenImageIO, then OpenEXR bindings, then OpenCV.
+- Sequence discovery now uses `os.scandir()` instead of `os.listdir()` for lower directory-scan overhead.
 
 ## CLI Contract
 Current arguments:
@@ -185,6 +186,11 @@ Also validated `--half` save dimensions:
 
 ## Key Files
 - `exr_view.py`
+- `cli.py`
+- `common.py`
+- `exr_io.py`
+- `color_pipeline.py`
+- `sequence_playback.py`
 - `requirements.txt`
 - `README.md`
 - `CODEX.md`
