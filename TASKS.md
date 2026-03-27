@@ -17,8 +17,8 @@
 - Add explicit return codes/messages for common dependency-missing scenarios.
 - Add a small smoke-test script that validates Linux Qt font fallback behavior in display mode.
 - Decide whether sequence mode should gain image-sequence export and/or headless validation behavior.
-- Decide whether LUT assets/config should be bundled into the installed package instead of relying on working-directory lookup.
 - Validate the documented `uv pip install .` deployment flow on a clean machine.
+- Decide whether default LUT bootstrap should also expose a non-interactive install flag for setup automation.
 
 ## P2 (Nice to Have)
 - Add optional output color metadata/report in stdout.
@@ -35,6 +35,7 @@
 - Resolved the active EXR loader once and switched sequence discovery to `os.scandir()`.
 - Added setuptools packaging metadata and an `exr-view` console script entry point.
 - Updated the README to make `uv pip install .` and `.venv/bin/exr-view` the primary deployment workflow.
+- Added shared config lookup at `~/.config/exr_visualizer/.luts` with first-run default LUT bootstrap.
 - Fixed argparse help issue with `%` in help text.
 - Added Linux Qt font handling and OpenCV `cv2/qt/fonts` bootstrap.
 - Added Arch Linux font candidate `/usr/share/fonts/TTF`.

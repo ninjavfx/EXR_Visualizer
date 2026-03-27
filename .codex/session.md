@@ -22,6 +22,7 @@
 - Resolved the EXR loader backend once at import time and changed sequence discovery to `os.scandir()`.
 - Added `pyproject.toml` packaging metadata and exposed `exr-view` as a console-script entry point.
 - Updated deployment docs to prefer `uv pip install .` and `.venv/bin/exr-view` on target machines.
+- Added shared config lookup at `~/.config/exr_visualizer/.luts` and interactive first-run copying of bundled default LUT assets into the user config directory.
 - Fixed help behavior (`-h/--help`) while keeping flop flags unchanged.
 - Added OpenEXR fallback loading and corrected dependency packaging details.
 - Added Linux-specific Qt font compatibility fixes:

@@ -28,3 +28,10 @@ py-modules = [
   "exr_view",
   "sequence_playback",
 ]
+
+[tool.setuptools.data-files]
+"share/exr_visualizer/LUT" = [
+  "LUT/.luts",
+  "LUT/Linear_to_SLog3.csp",
+  "LUT/RECS_Rec709.cube",
+]

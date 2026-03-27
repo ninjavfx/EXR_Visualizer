@@ -29,6 +29,10 @@ source .venv/bin/activate
 exr-view /path/to/image.exr
 ```
 
+On first run, if no LUT config is found yet, the tool checks
+`~/.config/exr_visualizer/.luts` first and can offer to copy the bundled default LUT
+config and LUT assets into `~/.config/exr_visualizer/`.
+
 Alternative install methods:
 
 ```bash
@@ -126,8 +130,12 @@ Notes:
 ## `.luts` location
 
 The script looks for:
+- `~/.config/exr_visualizer/.luts`
 - `./.luts`
 - fallback: `./LUT/.luts`
+
+If no config is found and bundled defaults are available, the tool can prompt to
+install them into `~/.config/exr_visualizer/` on first interactive run.
 
 ## Viewer controls
 

@@ -70,3 +70,7 @@
 ### 2026-03-27: Document `uv` package install as the default deployment path
 - Decision: prefer `uv venv --python 3.11 .venv` plus `uv pip install .`, and document `.venv/bin/exr-view` as the primary run command.
 - Why: matches the current environment management approach and avoids depending on `python -m pip` inside the target environment.
+
+### 2026-03-27: Support shared user LUT config bootstrap
+- Decision: check `~/.config/exr_visualizer/.luts` before working-directory configs and, when no config is found, offer to copy bundled default LUT assets into `~/.config/exr_visualizer/` during interactive runs.
+- Why: makes the tool runnable from anywhere after first-time setup without forcing users to stay in the repo directory.

@@ -79,8 +79,9 @@ If `.ccc` is not found, processing continues and prints exactly:
 ## Configuration Conventions
 ### `.luts` discovery
 Checked in this order from current working directory:
-1. `./.luts`
-2. `./LUT/.luts`
+1. `~/.config/exr_visualizer/.luts`
+2. `./.luts`
+3. `./LUT/.luts`
 
 ### `.luts` format
 Expected keys:
@@ -94,6 +95,12 @@ Path resolution behavior:
 2. directory containing `.luts`
 
 This dual resolution exists because current project config is `LUT/.luts` with values like `./LUT/...`.
+
+Default config bootstrap:
+- If no `.luts` config is found and bundled default LUT assets are available, an
+  interactive run can prompt the user to copy defaults into `~/.config/exr_visualizer/`.
+- Installed package defaults are bundled under the package data install path and copied
+  into the user config directory on demand.
 
 ### `.ccc` discovery
 Given `exr_path`, search for `*.ccc` in order:
@@ -113,6 +120,7 @@ Packages in `requirements.txt`:
 Packaging metadata:
 - `pyproject.toml` uses `setuptools`.
 - Installed console entry point: `exr-view = "exr_view:main"`.
+- Bundled default LUT assets are installed as package data under `share/exr_visualizer/LUT`.
 
 Important packaging detail:
 - Import name is `PyOpenColorIO`, but pip package name is `OpenColorIO`.

@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import glob
 import os
+import shutil
+import sys
+import sysconfig
 import xml.etree.ElementTree as ET
+from pathlib import Path
 from typing import Optional, Tuple
 
 import numpy as np
@@ -17,14 +21,85 @@ except Exception:  # pragma: no cover - environment-dependent
 
 
 def find_luts_config(cwd: str) -> str:
+    config_path = get_config_luts_path()
     candidates = [
+        str(config_path),
         os.path.join(cwd, ".luts"),
         os.path.join(cwd, "LUT", ".luts"),
     ]
     for path in candidates:
         if os.path.isfile(path):
             return path
-    fail(".luts config not found in current directory or ./LUT/.luts")
+
+    installed = maybe_install_default_luts(config_path)
+    if installed is not None:
+        return installed
+
+    fail(
+        ".luts config not found in "
+        f"{config_path}, current directory, or ./LUT/.luts"
+    )
+
+
+def get_config_dir() -> Path:
+    config_home = os.environ.get("XDG_CONFIG_HOME")
+    if config_home:
+        return Path(config_home).expanduser() / "exr_visualizer"
+    return Path.home() / ".config" / "exr_visualizer"
+
+
+def get_config_luts_path() -> Path:
+    return get_config_dir() / ".luts"
+
+
+def get_bundled_lut_dir() -> Optional[Path]:
+    module_dir = Path(__file__).resolve().parent
+    repo_lut_dir = module_dir / "LUT"
+    if repo_lut_dir.is_dir():
+        return repo_lut_dir
+
+    data_root = Path(sysconfig.get_path("data"))
+    installed_lut_dir = data_root / "share" / "exr_visualizer" / "LUT"
+    if installed_lut_dir.is_dir():
+        return installed_lut_dir
+
+    return None
+
+
+def install_default_luts(config_path: Path, bundled_lut_dir: Path) -> str:
+    config_dir = config_path.parent
+    target_lut_dir = config_dir / "LUT"
+    source_luts = bundled_lut_dir / ".luts"
+    if not source_luts.is_file():
+        fail(f"Bundled default .luts not found: {source_luts}")
+
+    config_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(bundled_lut_dir, target_lut_dir, dirs_exist_ok=True)
+    shutil.copy2(source_luts, config_path)
+    print(f"Installed default LUT config: {config_path}")
+    return str(config_path)
+
+
+def maybe_install_default_luts(config_path: Path) -> Optional[str]:
+    bundled_lut_dir = get_bundled_lut_dir()
+    if bundled_lut_dir is None:
+        return None
+    if not sys.stdin.isatty() or not sys.stdout.isatty():
+        return None
+
+    prompt = (
+        f"Default LUT config not found at {config_path}.\n"
+        f"Copy bundled defaults from {bundled_lut_dir} now? [Y/n]: "
+    )
+    try:
+        answer = input(prompt).strip().lower()
+    except EOFError:
+        return None
+
+    if answer not in ("", "y", "yes"):
+        return None
+
+    return install_default_luts(config_path, bundled_lut_dir)
 
 
 def parse_luts_config(path: str) -> Tuple[str, str]:
