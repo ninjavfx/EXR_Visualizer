@@ -13,6 +13,7 @@ This project currently prioritizes practical viewing/output over framework compl
 - Primary implementation is in a single script: `exr_view.py`.
 - Tested end-to-end on 2026-03-08 with a production EXR and discovered CDL.
 - Linux viewer/font issues encountered in this session were addressed in code.
+- Sequence playback was added for EXR file patterns addressed by trailing-dot prefixes.
 - Project memory files are present: `AGENTS.md`, `TASKS.md`, `DECISIONS.md`, `.codex/session.md`.
 
 ## High-Level Architecture
@@ -24,9 +25,11 @@ This project currently prioritizes practical viewing/output over framework compl
 - `configure_linux_qt_fontdir()`, `bootstrap_opencv_qt_fonts()`: Linux Qt/OpenCV font compatibility.
 - `find_luts_config()`, `parse_luts_config()`: LUT config discovery and path resolution.
 - `load_exr()`: EXR loading (OpenImageIO first, OpenEXR fallback, OpenCV fallback).
+- `parse_frame_range()`, `resolve_sequence_frames()`: sequence CLI parsing and frame discovery.
 - `find_ccc()`, `parse_ccc()`, `apply_cdl()`: CDL discovery and application.
 - `build_file_processor()`, `apply_ocio_processor()`: OCIO file transform processing.
-- `save_image()`, `display_image()`: output operations.
+- `process_frame()`: per-frame LUT/CDL/orientation processing.
+- `save_image()`, `display_image()`, `play_sequence()`: output operations.
 
 ## CLI Contract
 Current arguments:
@@ -36,6 +39,8 @@ Current arguments:
 - `-Y` or `-y`: flip image vertically.
 - `--save OUTPUT_PATH`: save processed result (`.png`, `.jpg`, `.exr`, etc.).
 - `--no-display`: skip OpenCV window display.
+- `-range/--range START..END`: inclusive frame filter for sequence playback.
+- `-fps/--fps`: sequence playback rate, default `24`.
 
 Behavior notes:
 - If `--save` and display enabled, image is both saved and shown.
@@ -44,6 +49,14 @@ Behavior notes:
 - Viewer closes on `q`, `Esc`, `Enter`, or window close button (not on arbitrary keypresses).
 - For non-EXR save formats: output is clamped to `[0,1]` and written as 8-bit.
 - For `.exr` save: output is written as float32.
+- Sequence mode is triggered when `exr_path` ends with `.` and does not point to an existing file.
+- Sequence matching expects `.exr` files whose basename is `<prefix><digits>`, such as
+  `shot.1.exr`, `shot.0001.exr`, or `shot.000001.exr`.
+- Sequence playback starts once the first processed frame is ready, while the remaining
+  frames continue caching in memory in the background.
+- Once all sequence frames are cached, playback loops from memory to maintain
+  real-time playback as closely as possible at the requested FPS.
+- Sequence mode currently requires display and does not support `--save`.
 
 ## Color Pipeline Contract (Do Not Reorder)
 Required operation order:
@@ -135,11 +148,12 @@ Also validated `--half` save dimensions:
 
 ## Known Limitations
 - No automated tests yet.
-- No EXR sequence/batch mode.
 - No explicit OCIO config workflow (using file transforms only).
 - No channel/layer selection for multichannel EXRs.
 - OpenEXR fallback currently expects `Imath` + `OpenEXR` Python bindings.
 - Linux Qt font bootstrap depends on write access to the installed `cv2` package path.
+- Sequence playback can consume substantial RAM because frames are cached after processing.
+- Sequence playback currently loops continuously until closed and does not save image sequences.
 
 ## Change Guidelines for Future Sessions
 - Preserve CLI backwards compatibility unless user requests changes.
@@ -158,6 +172,9 @@ Also validated `--half` save dimensions:
 7. Display path (without `--no-display`) on a GUI-capable machine.
 8. Linux Qt font path behavior with missing `cv2/qt/fonts`.
 9. Linux interactive move/resize with Super/Win key while viewer stays open.
+10. Sequence prefix detection with `shot.` style input.
+11. Sequence range filtering (`-range 1000..2000`).
+12. Mixed frame padding (`1`, `0001`, `000001`) in the same directory.
 
 ## Key Files
 - `exr_view.py`

@@ -38,3 +38,8 @@
 ### 2026-03-08: Standardize on `uv` + Python 3.11
 - Decision: recommend `uv venv --python 3.11` for environment setup.
 - Why: reproducible installs with working wheels for current dependency set.
+
+### 2026-03-27: Sequence playback uses trailing-dot prefix discovery and progressive memory caching
+- Decision: treat an input ending with `.` as a sequence prefix, match `.exr` files with trailing digits before the extension, support inclusive `-range START..END`, begin display as soon as the first processed frame is ready, and keep caching the rest of the processed sequence in memory during playback.
+- Why: matches common VFX naming patterns (`shot.0001.exr` etc.), keeps single-file CLI compatibility, reduces startup delay, and still prioritizes smooth real-time playback once frames are cached.
+- Note: sequence mode currently requires display and does not support `--save`.

@@ -52,7 +52,26 @@ python3 exr_view.py /path/to/image.exr
 python3 exr_view.py /path/to/image.exr --half
 python3 exr_view.py /path/to/image.exr --save output.png --no-display
 python3 exr_view.py /path/to/image.exr -X -Y --save output.png --no-display
+python3 exr_view.py /path/to/shot. --fps 24
+python3 exr_view.py /path/to/shot. -range 1000..2000 -fps 24
 ```
+
+Sequence mode is enabled when the input path ends with a trailing `.` and does not
+name an existing file. For example, `/show/shot/render.` matches frames such as:
+
+- `render.1.exr`
+- `render.0001.exr`
+- `render.000001.exr`
+
+The player scans the directory, finds the first and last matching frame, starts
+displaying as soon as the first processed frame is ready, and keeps caching the rest
+of the sequence in memory in the background. Once cached, playback loops from memory
+at the requested FPS. Default playback rate is `24`.
+
+Notes:
+- `-range START..END` is inclusive.
+- Sequence playback currently requires display mode.
+- `--save` remains single-image only.
 
 ## `.luts` location
 

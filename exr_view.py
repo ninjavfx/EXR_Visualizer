@@ -13,8 +13,11 @@ import argparse
 import glob
 import os
 import sys
+import threading
+import time
 import xml.etree.ElementTree as ET
-from typing import Optional, Tuple
+from dataclasses import dataclass
+from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -92,6 +95,22 @@ def bootstrap_opencv_qt_fonts() -> None:
 bootstrap_opencv_qt_fonts()
 
 
+@dataclass(frozen=True)
+class SequenceFrame:
+    frame: int
+    padding: int
+    path: str
+
+
+@dataclass
+class SequenceCacheState:
+    frames: List[SequenceFrame]
+    display_cache: List[Optional[np.ndarray]]
+    loaded_count: int = 0
+    error: Optional[str] = None
+    done: bool = False
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Display EXR with LUT/CDL pipeline")
     parser.add_argument("exr_path", help="Path to EXR image")
@@ -123,6 +142,20 @@ def parse_args() -> argparse.Namespace:
         "--no-display",
         action="store_true",
         help="Do not open a display window",
+    )
+    parser.add_argument(
+        "-range",
+        "--range",
+        dest="frame_range",
+        metavar="START..END",
+        help="Limit sequence playback to an inclusive frame range, e.g. 1000..2000",
+    )
+    parser.add_argument(
+        "-fps",
+        "--fps",
+        type=float,
+        default=24.0,
+        help="Sequence playback rate in frames per second (default: 24)",
     )
     return parser.parse_args()
 
@@ -191,6 +224,85 @@ def parse_luts_config(path: str) -> Tuple[str, str]:
         fail(f"Output LUT not found: {out_lut_abs}")
 
     return in_lut_abs, out_lut_abs
+
+
+def parse_frame_range(raw_range: Optional[str]) -> Optional[Tuple[int, int]]:
+    if raw_range is None:
+        return None
+
+    parts = raw_range.split("..", 1)
+    if len(parts) != 2 or not parts[0] or not parts[1]:
+        fail(f"Invalid range '{raw_range}'; expected START..END")
+
+    try:
+        start = int(parts[0])
+        end = int(parts[1])
+    except ValueError:
+        fail(f"Invalid range '{raw_range}'; frame values must be integers")
+
+    if start > end:
+        fail(f"Invalid range '{raw_range}'; START must be <= END")
+
+    return start, end
+
+
+def is_sequence_request(path: str) -> bool:
+    return path.endswith(".") and not os.path.isfile(path)
+
+
+def resolve_sequence_frames(
+    requested_path: str, frame_range: Optional[Tuple[int, int]]
+) -> List[SequenceFrame]:
+    abs_requested = os.path.abspath(requested_path)
+    seq_dir = os.path.dirname(abs_requested) or os.getcwd()
+    seq_prefix = os.path.basename(abs_requested)
+
+    if not os.path.isdir(seq_dir):
+        fail(f"Sequence directory not found: {seq_dir}")
+
+    matches: List[SequenceFrame] = []
+    for entry in sorted(os.listdir(seq_dir)):
+        full_path = os.path.join(seq_dir, entry)
+        if not os.path.isfile(full_path):
+            continue
+
+        stem, ext = os.path.splitext(entry)
+        if ext.lower() != ".exr":
+            continue
+        if not stem.startswith(seq_prefix):
+            continue
+
+        frame_text = stem[len(seq_prefix) :]
+        if not frame_text or not frame_text.isdigit():
+            continue
+
+        frame = int(frame_text)
+        if frame_range is not None:
+            start, end = frame_range
+            if frame < start or frame > end:
+                continue
+
+        matches.append(
+            SequenceFrame(
+                frame=frame,
+                padding=len(frame_text),
+                path=full_path,
+            )
+        )
+
+    if not matches:
+        if frame_range is None:
+            fail(
+                f"No EXR sequence frames found for prefix '{requested_path}'. "
+                "Expected files like prefix0001.exr or prefix1.exr"
+            )
+        fail(
+            f"No EXR sequence frames found for prefix '{requested_path}' "
+            f"in range {frame_range[0]}..{frame_range[1]}"
+        )
+
+    matches.sort(key=lambda item: (item.frame, item.padding, item.path))
+    return matches
 
 
 def load_exr(path: str) -> np.ndarray:
@@ -371,7 +483,7 @@ def apply_ocio_processor(img: np.ndarray, cpu_processor) -> np.ndarray:
     return flat.reshape(img.shape)
 
 
-def display_image(img_rgb: np.ndarray, half: bool) -> None:
+def prepare_display_image(img_rgb: np.ndarray, half: bool) -> np.ndarray:
     if cv2 is None:
         fail("OpenCV is required for display. Install with: pip install opencv-python")
 
@@ -384,8 +496,11 @@ def display_image(img_rgb: np.ndarray, half: bool) -> None:
             interpolation=cv2.INTER_AREA,
         )
 
-    disp_u8 = (disp * 255.0 + 0.5).astype(np.uint8)
-    disp_bgr = disp_u8[:, :, ::-1]
+    return (disp * 255.0 + 0.5).astype(np.uint8)[:, :, ::-1]
+
+
+def display_image(img_rgb: np.ndarray, half: bool) -> None:
+    disp_bgr = prepare_display_image(img_rgb, half)
 
     window_name = "EXR Visualizer"
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
@@ -439,26 +554,16 @@ def apply_orientation(img_rgb: np.ndarray, flop_x: bool, flip_y: bool) -> np.nda
     return np.ascontiguousarray(out)
 
 
-def main() -> None:
-    args = parse_args()
-    exr_path = os.path.abspath(args.exr_path)
-
-    luts_path = find_luts_config(os.getcwd())
-    in_lut, out_lut = parse_luts_config(luts_path)
-
-    print(f"Using .luts: {luts_path}")
-    print(f"Input LUT: {in_lut}")
-    print(f"Output LUT: {out_lut}")
-
+def process_frame(
+    exr_path: str,
+    in_proc,
+    out_proc,
+    flop_x: bool,
+    flip_y: bool,
+) -> np.ndarray:
     img = load_exr(exr_path)
-
-    in_proc = build_file_processor(in_lut)
-    out_proc = build_file_processor(out_lut)
-
-    # 1) Linear -> target space (from in_lut)
     img = apply_ocio_processor(img, in_proc)
 
-    # 2) Apply CDL if found
     ccc_path = find_ccc(exr_path)
     if ccc_path:
         print(f"Using CDL: {ccc_path}")
@@ -467,9 +572,197 @@ def main() -> None:
     else:
         print("CDL not found")
 
-    # 3) Apply output LUT to display space
     img = apply_ocio_processor(img, out_proc)
-    img = apply_orientation(img, args.flop_x, args.flip_y)
+    return apply_orientation(img, flop_x, flip_y)
+
+
+def cache_sequence_frames(
+    state: SequenceCacheState,
+    in_proc,
+    out_proc,
+    flop_x: bool,
+    flip_y: bool,
+    half: bool,
+    state_lock: threading.Lock,
+) -> None:
+    try:
+        for index, item in enumerate(state.frames):
+            print(f"Caching frame {item.frame}: {item.path}")
+            processed = process_frame(
+                item.path,
+                in_proc,
+                out_proc,
+                flop_x,
+                flip_y,
+            )
+            display_ready = prepare_display_image(processed, half)
+            with state_lock:
+                state.display_cache[index] = display_ready
+                state.loaded_count += 1
+    except BaseException as exc:
+        with state_lock:
+            state.error = str(exc) or exc.__class__.__name__
+    finally:
+        with state_lock:
+            state.done = True
+
+
+def play_sequence(
+    state: SequenceCacheState,
+    fps: float,
+    state_lock: threading.Lock,
+) -> None:
+    if cv2 is None:
+        fail("OpenCV is required for display. Install with: pip install opencv-python")
+    if fps <= 0:
+        fail("FPS must be greater than 0")
+
+    window_name = "EXR Visualizer"
+    frame_delay = 1.0 / fps
+
+    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    index = 0
+
+    while True:
+        with state_lock:
+            if state.error is not None:
+                fail(state.error)
+            first_frame = state.display_cache[0] if state.display_cache else None
+            loaded_count = state.loaded_count
+            done = state.done
+        if first_frame is not None:
+            break
+        if done:
+            fail("Sequence cache did not produce any frames")
+
+        visible = cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE)
+        if visible < 1:
+            cv2.destroyAllWindows()
+            return
+        cv2.waitKeyEx(50)
+
+    index = 0
+    next_deadline = time.perf_counter() + frame_delay
+
+    while True:
+        visible = cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE)
+        if visible < 1:
+            break
+
+        with state_lock:
+            if state.error is not None:
+                fail(state.error)
+            loaded_count = state.loaded_count
+            done = state.done
+            current = state.display_cache[index]
+            if current is None and loaded_count > 0:
+                fallback_index = min(index, loaded_count - 1)
+                current = state.display_cache[fallback_index]
+                index = fallback_index
+            frame_info = state.frames[index]
+
+        if current is None:
+            current = first_frame
+            index = 0
+            frame_info = state.frames[0]
+
+        cv2.imshow(window_name, current)
+        if hasattr(cv2, "setWindowTitle"):
+            suffix = ""
+            if not done:
+                suffix = f" [{loaded_count}/{len(state.frames)} cached]"
+            cv2.setWindowTitle(
+                window_name,
+                f"EXR Visualizer - frame {frame_info.frame}{suffix}",
+            )
+
+        now = time.perf_counter()
+        wait_ms = max(1, int((next_deadline - now) * 1000.0))
+        key = cv2.waitKeyEx(wait_ms)
+        if key in (27, 13, ord("q"), ord("Q")):
+            break
+
+        now = time.perf_counter()
+        if now >= next_deadline + frame_delay:
+            next_deadline = now + frame_delay
+        else:
+            next_deadline += frame_delay
+
+        with state_lock:
+            loaded_count = state.loaded_count
+            done = state.done
+
+        if loaded_count <= 0:
+            index = 0
+        elif done:
+            index = (index + 1) % len(state.frames)
+        else:
+            index = (index + 1) % loaded_count
+
+    cv2.destroyAllWindows()
+
+
+def main() -> None:
+    args = parse_args()
+    if args.fps <= 0:
+        fail("FPS must be greater than 0")
+
+    exr_path = os.path.abspath(args.exr_path)
+    frame_range = parse_frame_range(args.frame_range)
+    sequence_mode = is_sequence_request(args.exr_path)
+
+    luts_path = find_luts_config(os.getcwd())
+    in_lut, out_lut = parse_luts_config(luts_path)
+
+    print(f"Using .luts: {luts_path}")
+    print(f"Input LUT: {in_lut}")
+    print(f"Output LUT: {out_lut}")
+
+    in_proc = build_file_processor(in_lut)
+    out_proc = build_file_processor(out_lut)
+
+    if sequence_mode:
+        if args.save:
+            fail("Sequence playback does not support --save")
+        if args.no_display:
+            fail("Sequence playback requires display; --no-display is not supported")
+
+        frames = resolve_sequence_frames(args.exr_path, frame_range)
+        print(
+            f"Sequence frames: {frames[0].frame}..{frames[-1].frame} "
+            f"({len(frames)} total, playing while caching at {args.fps:g} fps)"
+        )
+
+        state = SequenceCacheState(
+            frames=frames,
+            display_cache=[None] * len(frames),
+        )
+        state_lock = threading.Lock()
+        loader = threading.Thread(
+            target=cache_sequence_frames,
+            args=(
+                state,
+                in_proc,
+                out_proc,
+                args.flop_x,
+                args.flip_y,
+                args.half,
+                state_lock,
+            ),
+            daemon=True,
+        )
+        loader.start()
+
+        play_sequence(state, args.fps, state_lock)
+        return
+
+    img = process_frame(
+        exr_path,
+        in_proc,
+        out_proc,
+        args.flop_x,
+        args.flip_y,
+    )
 
     if args.save:
         save_image(img, os.path.abspath(args.save), args.half)
