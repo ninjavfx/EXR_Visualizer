@@ -7,8 +7,50 @@ Tool to view EXR files with this pipeline:
 
 ## Install
 
+Recommended deployment on another machine:
+
+```bash
+git clone <repo>
+cd EXR_Visualizer
+uv venv --python 3.11 .venv
+uv pip install .
+```
+
+Run without activating the environment:
+
+```bash
+.venv/bin/exr-view /path/to/image.exr
+```
+
+Or activate it first:
+
+```bash
+source .venv/bin/activate
+exr-view /path/to/image.exr
+```
+
+Alternative install methods:
+
 ```bash
 python3 -m pip install -r requirements.txt
+```
+
+Package install:
+
+```bash
+python3 -m pip install .
+```
+
+After package install, the CLI is available as:
+
+```bash
+exr-view /path/to/image.exr
+```
+
+Or isolate it with `pipx`:
+
+```bash
+pipx install .
 ```
 
 Or with `uv`:
@@ -16,6 +58,7 @@ Or with `uv`:
 ```bash
 uv venv --python 3.11 .venv
 uv pip install -r requirements.txt
+uv pip install .
 ```
 
 ### Quick macOS install
@@ -48,14 +91,15 @@ The script now auto-detects common Linux font directories and also tries to boot
 ## Run
 
 ```bash
-python3 exr_view.py /path/to/image.exr
-python3 exr_view.py /path/to/image.exr --half
-python3 exr_view.py /path/to/image.exr --save output.png --no-display
-python3 exr_view.py /path/to/image.exr -X -Y --save output.png --no-display
-python3 exr_view.py /path/to/shot. --fps 24
-python3 exr_view.py /path/to/shot. -range 1000..2000 -fps 24
-python3 exr_view.py /path/to/shot. -threads 2
-python3 exr_view.py /path/to/shot. -threads 4
+.venv/bin/exr-view /path/to/image.exr
+.venv/bin/exr-view /path/to/image.exr --half
+.venv/bin/exr-view /path/to/image.exr --save output.png --no-display
+.venv/bin/exr-view /path/to/image.exr -X -Y --save output.png --no-display
+exr-view /path/to/image.exr
+.venv/bin/exr-view /path/to/shot. --fps 24
+.venv/bin/exr-view /path/to/shot. -range 1000..2000 -fps 24
+.venv/bin/exr-view /path/to/shot. -threads 2
+.venv/bin/exr-view /path/to/shot. -threads 4
 ```
 
 Sequence mode is enabled when the input path ends with a trailing `.` and does not

@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "exr-visualizer"
+version = "0.1.0"
+description = "CLI to preview EXR images through LUT and CDL transforms"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy",
+  "opencv-python",
+  "OpenColorIO",
+  "OpenImageIO",
+  "OpenEXR",
+]
+
+[project.scripts]
+exr-view = "exr_view:main"
+
+[tool.setuptools]
+py-modules = [
+  "cli",
+  "color_pipeline",
+  "common",
+  "exr_io",
+  "exr_view",
+  "sequence_playback",
+]

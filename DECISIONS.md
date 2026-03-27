@@ -62,3 +62,11 @@
 - Why: the single script had grown large enough that sequence state, playback logic, I/O, and color processing were becoming harder to reason about and extend safely.
 - Decision: resolve the active EXR loading backend once at import time instead of checking loader availability on every frame.
 - Why: removes repeated per-frame backend selection overhead, especially during sequence caching.
+
+### 2026-03-27: Add setuptools packaging and console-script entry point
+- Decision: add `pyproject.toml` with setuptools metadata and expose `exr-view` as the installed command via `exr_view:main`.
+- Why: allows standard `pip install .`, `uv pip install .`, and `pipx install .` workflows without changing the existing CLI entry function.
+
+### 2026-03-27: Document `uv` package install as the default deployment path
+- Decision: prefer `uv venv --python 3.11 .venv` plus `uv pip install .`, and document `.venv/bin/exr-view` as the primary run command.
+- Why: matches the current environment management approach and avoids depending on `python -m pip` inside the target environment.

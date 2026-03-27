@@ -11,6 +11,7 @@ This project currently prioritizes practical viewing/output over framework compl
 ## Repository Status
 - Git repo initialized and connected to GitHub via SSH remote.
 - `exr_view.py` remains the CLI entrypoint, with implementation split across focused modules.
+- Packaging metadata is provided through `pyproject.toml` with an `exr-view` console script.
 - Tested end-to-end on 2026-03-08 with a production EXR and discovered CDL.
 - Linux viewer/font issues encountered in this session were addressed in code.
 - Sequence playback was added for EXR file patterns addressed by trailing-dot prefixes.
@@ -109,13 +110,29 @@ Packages in `requirements.txt`:
 - `OpenImageIO`
 - `OpenEXR`
 
+Packaging metadata:
+- `pyproject.toml` uses `setuptools`.
+- Installed console entry point: `exr-view = "exr_view:main"`.
+
 Important packaging detail:
 - Import name is `PyOpenColorIO`, but pip package name is `OpenColorIO`.
 
 Preferred setup:
 ```bash
 uv venv --python 3.11 .venv
-uv pip install -r requirements.txt
+uv pip install .
+```
+
+Package install examples:
+```bash
+python3 -m pip install .
+pipx install .
+uv pip install .
+```
+
+Recommended deployed run command:
+```bash
+.venv/bin/exr-view /path/to/image.exr
 ```
 
 Run examples:
@@ -192,6 +209,7 @@ Also validated `--half` save dimensions:
 - `color_pipeline.py`
 - `sequence_playback.py`
 - `requirements.txt`
+- `pyproject.toml`
 - `README.md`
 - `CODEX.md`
 - `AGENTS.md`
