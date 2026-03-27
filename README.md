@@ -68,6 +68,9 @@ displaying as soon as the first processed frame is ready, and keeps caching the 
 of the sequence in memory in the background. Once cached, playback loops from memory
 at the requested FPS. Default playback rate is `24`.
 
+For sequence playback, CDL discovery/parsing is done once up front and reused for the
+full cache pass. Cache logging is reduced to lightweight progress updates.
+
 Notes:
 - `-range START..END` is inclusive.
 - Sequence playback currently requires display mode.

@@ -28,6 +28,7 @@
 - Added EXR sequence playback with `shot.` prefix detection, `-range`, `-fps`, and in-memory frame caching.
 - Updated sequence playback to display while frames continue caching in the background.
 - Added basic sequence transport controls for play/pause and frame stepping.
+- Reduced sequence cache overhead by reusing parsed CDL data and trimming per-frame logging.
 - Fixed argparse help issue with `%` in help text.
 - Added Linux Qt font handling and OpenCV `cv2/qt/fonts` bootstrap.
 - Added Arch Linux font candidate `/usr/share/fonts/TTF`.

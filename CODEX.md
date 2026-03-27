@@ -57,6 +57,9 @@ Behavior notes:
   frames continue caching in memory in the background.
 - Once all sequence frames are cached, playback loops from memory to maintain
   real-time playback as closely as possible at the requested FPS.
+- Sequence caching resolves and parses the sequence CDL once, then reuses that data for
+  each frame instead of re-reading the `.ccc` file per frame.
+- Sequence caching prints coarse progress updates instead of one log line per frame.
 - Sequence mode currently requires display and does not support `--save`.
 
 ## Color Pipeline Contract (Do Not Reorder)

@@ -47,3 +47,7 @@
 ### 2026-03-27: Sequence playback gets basic transport controls
 - Decision: support `Space` for play/pause and `,` / `.` for single-frame stepping in sequence mode.
 - Why: basic transport controls are needed to inspect frames without leaving the playback view, and punctuation keys are more reliable than OpenCV arrow-key codes across platforms.
+
+### 2026-03-27: Reuse sequence CDL data and reduce cache logging
+- Decision: resolve and parse the sequence `.ccc` once before cache loading, then reuse the parsed CDL values for all frames; replace per-frame cache logging with coarse progress output.
+- Why: removes repeated XML I/O/parsing work and cuts terminal overhead during long cache passes without changing image results.

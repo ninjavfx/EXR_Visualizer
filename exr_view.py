@@ -560,17 +560,26 @@ def process_frame(
     out_proc,
     flop_x: bool,
     flip_y: bool,
+    ccc_path: Optional[str] = None,
+    cdl_values: Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, float]] = None,
+    log_cdl: bool = True,
 ) -> np.ndarray:
     img = load_exr(exr_path)
     img = apply_ocio_processor(img, in_proc)
 
-    ccc_path = find_ccc(exr_path)
-    if ccc_path:
-        print(f"Using CDL: {ccc_path}")
-        slope, offset, power, saturation = parse_ccc(ccc_path)
+    if ccc_path is None and cdl_values is None:
+        ccc_path = find_ccc(exr_path)
+        if ccc_path:
+            cdl_values = parse_ccc(ccc_path)
+
+    if ccc_path and cdl_values is not None:
+        if log_cdl:
+            print(f"Using CDL: {ccc_path}")
+        slope, offset, power, saturation = cdl_values
         img = apply_cdl(img, slope, offset, power, saturation)
     else:
-        print("CDL not found")
+        if log_cdl:
+            print("CDL not found")
 
     img = apply_ocio_processor(img, out_proc)
     return apply_orientation(img, flop_x, flip_y)
@@ -583,22 +592,31 @@ def cache_sequence_frames(
     flop_x: bool,
     flip_y: bool,
     half: bool,
+    ccc_path: Optional[str],
+    cdl_values: Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, float]],
     state_lock: threading.Lock,
 ) -> None:
     try:
+        total = len(state.frames)
         for index, item in enumerate(state.frames):
-            print(f"Caching frame {item.frame}: {item.path}")
             processed = process_frame(
                 item.path,
                 in_proc,
                 out_proc,
                 flop_x,
                 flip_y,
+                ccc_path=ccc_path,
+                cdl_values=cdl_values,
+                log_cdl=False,
             )
             display_ready = prepare_display_image(processed, half)
             with state_lock:
                 state.display_cache[index] = display_ready
                 state.loaded_count += 1
+                loaded_count = state.loaded_count
+
+            if loaded_count == 1 or loaded_count == total or loaded_count % 10 == 0:
+                print(f"Cached {loaded_count}/{total} frames")
     except BaseException as exc:
         with state_lock:
             state.error = str(exc) or exc.__class__.__name__
@@ -757,6 +775,14 @@ def main() -> None:
             fail("Sequence playback requires display; --no-display is not supported")
 
         frames = resolve_sequence_frames(args.exr_path, frame_range)
+        ccc_path = find_ccc(frames[0].path)
+        cdl_values = parse_ccc(ccc_path) if ccc_path else None
+
+        if ccc_path:
+            print(f"Using CDL: {ccc_path}")
+        else:
+            print("CDL not found")
+
         print(
             f"Sequence frames: {frames[0].frame}..{frames[-1].frame} "
             f"({len(frames)} total, playing while caching at {args.fps:g} fps)"
@@ -776,6 +802,8 @@ def main() -> None:
                 args.flop_x,
                 args.flip_y,
                 args.half,
+                ccc_path,
+                cdl_values,
                 state_lock,
             ),
             daemon=True,
