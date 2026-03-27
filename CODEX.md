@@ -41,6 +41,7 @@ Current arguments:
 - `--no-display`: skip OpenCV window display.
 - `-range/--range START..END`: inclusive frame filter for sequence playback.
 - `-fps/--fps`: sequence playback rate, default `24`.
+- `-threads/--threads`: sequence cache worker threads, default `1`.
 
 Behavior notes:
 - If `--save` and display enabled, image is both saved and shown.
@@ -60,6 +61,8 @@ Behavior notes:
 - Sequence caching resolves and parses the sequence CDL once, then reuses that data for
   each frame instead of re-reading the `.ccc` file per frame.
 - Sequence caching prints coarse progress updates instead of one log line per frame.
+- Sequence caching can run with multiple worker threads; use `1` by default and try `2`
+  or `4` on local NVMe storage.
 - Sequence mode currently requires display and does not support `--save`.
 
 ## Color Pipeline Contract (Do Not Reorder)

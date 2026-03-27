@@ -17,6 +17,7 @@
 - Updated sequence playback to start displaying as soon as the first frame is ready while the rest of the cache fills in the background.
 - Added sequence transport controls: `Space` play/pause and `,` / `.` frame stepping.
 - Reduced sequence cache overhead by reusing parsed CDL data and replacing per-frame cache logs with coarse progress updates.
+- Added optional threaded sequence caching with `-threads`, defaulting to `1` and targeting `2` or `4` for local NVMe reads.
 - Fixed help behavior (`-h/--help`) while keeping flop flags unchanged.
 - Added OpenEXR fallback loading and corrected dependency packaging details.
 - Added Linux-specific Qt font compatibility fixes:

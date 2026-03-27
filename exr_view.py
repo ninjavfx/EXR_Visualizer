@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import glob
 import os
+import queue
 import sys
 import threading
 import time
@@ -106,7 +107,9 @@ class SequenceFrame:
 class SequenceCacheState:
     frames: List[SequenceFrame]
     display_cache: List[Optional[np.ndarray]]
-    loaded_count: int = 0
+    ready_count: int = 0
+    contiguous_count: int = 0
+    last_progress_reported: int = 0
     error: Optional[str] = None
     done: bool = False
 
@@ -156,6 +159,13 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=24.0,
         help="Sequence playback rate in frames per second (default: 24)",
+    )
+    parser.add_argument(
+        "-threads",
+        "--threads",
+        type=int,
+        default=1,
+        help="Sequence cache worker threads (default: 1; try 2 or 4 on local NVMe)",
     )
     return parser.parse_args()
 
@@ -585,20 +595,30 @@ def process_frame(
     return apply_orientation(img, flop_x, flip_y)
 
 
-def cache_sequence_frames(
+def cache_sequence_worker(
     state: SequenceCacheState,
-    in_proc,
-    out_proc,
+    frame_queue: "queue.Queue[Tuple[int, SequenceFrame]]",
+    in_lut: str,
+    out_lut: str,
     flop_x: bool,
     flip_y: bool,
     half: bool,
     ccc_path: Optional[str],
     cdl_values: Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, float]],
     state_lock: threading.Lock,
+    stop_event: threading.Event,
 ) -> None:
     try:
+        in_proc = build_file_processor(in_lut)
+        out_proc = build_file_processor(out_lut)
         total = len(state.frames)
-        for index, item in enumerate(state.frames):
+
+        while not stop_event.is_set():
+            try:
+                index, item = frame_queue.get_nowait()
+            except queue.Empty:
+                break
+
             processed = process_frame(
                 item.path,
                 in_proc,
@@ -610,19 +630,84 @@ def cache_sequence_frames(
                 log_cdl=False,
             )
             display_ready = prepare_display_image(processed, half)
-            with state_lock:
-                state.display_cache[index] = display_ready
-                state.loaded_count += 1
-                loaded_count = state.loaded_count
 
-            if loaded_count == 1 or loaded_count == total or loaded_count % 10 == 0:
-                print(f"Cached {loaded_count}/{total} frames")
+            progress_count = None
+            with state_lock:
+                if state.error is not None:
+                    frame_queue.task_done()
+                    return
+                state.display_cache[index] = display_ready
+                state.ready_count += 1
+                while (
+                    state.contiguous_count < total
+                    and state.display_cache[state.contiguous_count] is not None
+                ):
+                    state.contiguous_count += 1
+
+                ready_count = state.ready_count
+                if (
+                    ready_count == 1
+                    or ready_count == total
+                    or ready_count // 10 > state.last_progress_reported // 10
+                ):
+                    state.last_progress_reported = ready_count
+                    progress_count = ready_count
+
+            if progress_count is not None:
+                print(f"Cached {progress_count}/{total} frames")
+            frame_queue.task_done()
     except BaseException as exc:
         with state_lock:
-            state.error = str(exc) or exc.__class__.__name__
-    finally:
-        with state_lock:
-            state.done = True
+            if state.error is None:
+                state.error = str(exc) or exc.__class__.__name__
+        stop_event.set()
+
+
+def cache_sequence_frames(
+    state: SequenceCacheState,
+    in_lut: str,
+    out_lut: str,
+    flop_x: bool,
+    flip_y: bool,
+    half: bool,
+    ccc_path: Optional[str],
+    cdl_values: Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, float]],
+    threads: int,
+    state_lock: threading.Lock,
+) -> None:
+    frame_queue: "queue.Queue[Tuple[int, SequenceFrame]]" = queue.Queue()
+    for index, item in enumerate(state.frames):
+        frame_queue.put((index, item))
+
+    stop_event = threading.Event()
+    worker_count = min(max(1, threads), len(state.frames))
+    workers = []
+    for _ in range(worker_count):
+        worker = threading.Thread(
+            target=cache_sequence_worker,
+            args=(
+                state,
+                frame_queue,
+                in_lut,
+                out_lut,
+                flop_x,
+                flip_y,
+                half,
+                ccc_path,
+                cdl_values,
+                state_lock,
+                stop_event,
+            ),
+            daemon=True,
+        )
+        workers.append(worker)
+        worker.start()
+
+    for worker in workers:
+        worker.join()
+
+    with state_lock:
+        state.done = True
 
 
 def play_sequence(
@@ -650,7 +735,8 @@ def play_sequence(
             if state.error is not None:
                 fail(state.error)
             first_frame = state.display_cache[0] if state.display_cache else None
-            loaded_count = state.loaded_count
+            ready_count = state.ready_count
+            contiguous_count = state.contiguous_count
             done = state.done
         if first_frame is not None:
             break
@@ -674,11 +760,12 @@ def play_sequence(
         with state_lock:
             if state.error is not None:
                 fail(state.error)
-            loaded_count = state.loaded_count
+            ready_count = state.ready_count
+            contiguous_count = state.contiguous_count
             done = state.done
             current = state.display_cache[index]
-            if current is None and loaded_count > 0:
-                fallback_index = min(index, loaded_count - 1)
+            if current is None and contiguous_count > 0:
+                fallback_index = min(index, contiguous_count - 1)
                 current = state.display_cache[fallback_index]
                 index = fallback_index
             frame_info = state.frames[index]
@@ -692,7 +779,7 @@ def play_sequence(
         if hasattr(cv2, "setWindowTitle"):
             suffix = ""
             if not done:
-                suffix = f" [{loaded_count}/{len(state.frames)} cached]"
+                suffix = f" [{ready_count}/{len(state.frames)} cached]"
             status = "Playing" if is_playing else "Paused"
             cv2.setWindowTitle(
                 window_name,
@@ -713,10 +800,10 @@ def play_sequence(
             continue
 
         with state_lock:
-            loaded_count = state.loaded_count
+            contiguous_count = state.contiguous_count
             done = state.done
 
-        available_count = len(state.frames) if done else loaded_count
+        available_count = len(state.frames) if done else contiguous_count
         if key in step_back_keys and available_count > 0:
             index = (index - 1) % available_count
             next_deadline = time.perf_counter() + frame_delay
@@ -730,7 +817,7 @@ def play_sequence(
             continue
 
         with state_lock:
-            loaded_count = state.loaded_count
+            contiguous_count = state.contiguous_count
             done = state.done
 
         now = time.perf_counter()
@@ -739,12 +826,12 @@ def play_sequence(
         else:
             next_deadline += frame_delay
 
-        if loaded_count <= 0:
+        if contiguous_count <= 0:
             index = 0
         elif done:
             index = (index + 1) % len(state.frames)
         else:
-            index = (index + 1) % loaded_count
+            index = (index + 1) % contiguous_count
 
     cv2.destroyAllWindows()
 
@@ -753,6 +840,8 @@ def main() -> None:
     args = parse_args()
     if args.fps <= 0:
         fail("FPS must be greater than 0")
+    if args.threads <= 0:
+        fail("Threads must be greater than 0")
 
     exr_path = os.path.abspath(args.exr_path)
     frame_range = parse_frame_range(args.frame_range)
@@ -764,9 +853,6 @@ def main() -> None:
     print(f"Using .luts: {luts_path}")
     print(f"Input LUT: {in_lut}")
     print(f"Output LUT: {out_lut}")
-
-    in_proc = build_file_processor(in_lut)
-    out_proc = build_file_processor(out_lut)
 
     if sequence_mode:
         if args.save:
@@ -785,7 +871,8 @@ def main() -> None:
 
         print(
             f"Sequence frames: {frames[0].frame}..{frames[-1].frame} "
-            f"({len(frames)} total, playing while caching at {args.fps:g} fps)"
+            f"({len(frames)} total, playing while caching at {args.fps:g} fps, "
+            f"{args.threads} thread{'s' if args.threads != 1 else ''})"
         )
 
         state = SequenceCacheState(
@@ -797,13 +884,14 @@ def main() -> None:
             target=cache_sequence_frames,
             args=(
                 state,
-                in_proc,
-                out_proc,
+                in_lut,
+                out_lut,
                 args.flop_x,
                 args.flip_y,
                 args.half,
                 ccc_path,
                 cdl_values,
+                args.threads,
                 state_lock,
             ),
             daemon=True,
@@ -812,6 +900,9 @@ def main() -> None:
 
         play_sequence(state, args.fps, state_lock)
         return
+
+    in_proc = build_file_processor(in_lut)
+    out_proc = build_file_processor(out_lut)
 
     img = process_frame(
         exr_path,

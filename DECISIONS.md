@@ -51,3 +51,8 @@
 ### 2026-03-27: Reuse sequence CDL data and reduce cache logging
 - Decision: resolve and parse the sequence `.ccc` once before cache loading, then reuse the parsed CDL values for all frames; replace per-frame cache logging with coarse progress output.
 - Why: removes repeated XML I/O/parsing work and cuts terminal overhead during long cache passes without changing image results.
+
+### 2026-03-27: Add optional threaded sequence caching
+- Decision: add `-threads/--threads` for sequence caching with a default of `1`, and recommend `2` or `4` for local NVMe-backed sequences.
+- Why: parallel EXR read and processing can reduce cache time on fast local storage while preserving deterministic frame order in playback.
+- Note: each worker builds its own OCIO processors to avoid sharing processor instances across threads.
