@@ -86,3 +86,8 @@ In display mode, the window closes on:
 - `Esc`
 - `Enter`
 - Window close button
+
+In sequence mode:
+- `Space` toggles play/pause
+- `,` steps back one frame
+- `.` steps forward one frame

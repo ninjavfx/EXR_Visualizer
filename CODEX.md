@@ -47,6 +47,7 @@ Behavior notes:
 - `--half` affects both save and display outputs.
 - `-X/-x` and `-Y/-y` affect both save and display outputs.
 - Viewer closes on `q`, `Esc`, `Enter`, or window close button (not on arbitrary keypresses).
+- In sequence mode, `Space` toggles play/pause, `,` steps back one frame, and `.` steps forward one frame.
 - For non-EXR save formats: output is clamped to `[0,1]` and written as 8-bit.
 - For `.exr` save: output is written as float32.
 - Sequence mode is triggered when `exr_path` ends with `.` and does not point to an existing file.

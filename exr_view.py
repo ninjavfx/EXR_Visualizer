@@ -622,6 +622,10 @@ def play_sequence(
 
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
     index = 0
+    is_playing = True
+
+    step_back_keys = {ord(","), ord("<")}
+    step_forward_keys = {ord("."), ord(">")}
 
     while True:
         with state_lock:
@@ -671,26 +675,51 @@ def play_sequence(
             suffix = ""
             if not done:
                 suffix = f" [{loaded_count}/{len(state.frames)} cached]"
+            status = "Playing" if is_playing else "Paused"
             cv2.setWindowTitle(
                 window_name,
-                f"EXR Visualizer - frame {frame_info.frame}{suffix}",
+                f"EXR Visualizer - {status} - frame {frame_info.frame}{suffix}",
             )
 
         now = time.perf_counter()
-        wait_ms = max(1, int((next_deadline - now) * 1000.0))
+        if is_playing:
+            wait_ms = max(1, int((next_deadline - now) * 1000.0))
+        else:
+            wait_ms = 50
         key = cv2.waitKeyEx(wait_ms)
         if key in (27, 13, ord("q"), ord("Q")):
             break
+        if key == 32:
+            is_playing = not is_playing
+            next_deadline = time.perf_counter() + frame_delay
+            continue
+
+        with state_lock:
+            loaded_count = state.loaded_count
+            done = state.done
+
+        available_count = len(state.frames) if done else loaded_count
+        if key in step_back_keys and available_count > 0:
+            index = (index - 1) % available_count
+            next_deadline = time.perf_counter() + frame_delay
+            continue
+        if key in step_forward_keys and available_count > 0:
+            index = (index + 1) % available_count
+            next_deadline = time.perf_counter() + frame_delay
+            continue
+
+        if not is_playing:
+            continue
+
+        with state_lock:
+            loaded_count = state.loaded_count
+            done = state.done
 
         now = time.perf_counter()
         if now >= next_deadline + frame_delay:
             next_deadline = now + frame_delay
         else:
             next_deadline += frame_delay
-
-        with state_lock:
-            loaded_count = state.loaded_count
-            done = state.done
 
         if loaded_count <= 0:
             index = 0

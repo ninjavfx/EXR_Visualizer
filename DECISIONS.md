@@ -43,3 +43,7 @@
 - Decision: treat an input ending with `.` as a sequence prefix, match `.exr` files with trailing digits before the extension, support inclusive `-range START..END`, begin display as soon as the first processed frame is ready, and keep caching the rest of the processed sequence in memory during playback.
 - Why: matches common VFX naming patterns (`shot.0001.exr` etc.), keeps single-file CLI compatibility, reduces startup delay, and still prioritizes smooth real-time playback once frames are cached.
 - Note: sequence mode currently requires display and does not support `--save`.
+
+### 2026-03-27: Sequence playback gets basic transport controls
+- Decision: support `Space` for play/pause and `,` / `.` for single-frame stepping in sequence mode.
+- Why: basic transport controls are needed to inspect frames without leaving the playback view, and punctuation keys are more reliable than OpenCV arrow-key codes across platforms.

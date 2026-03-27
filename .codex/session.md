@@ -15,6 +15,7 @@
 - Added sequence frame discovery for `.exr` files with numeric suffixes like `1`, `0001`, or `000001`.
 - Added per-frame processing cache so playback uses preprocessed frames held in memory.
 - Updated sequence playback to start displaying as soon as the first frame is ready while the rest of the cache fills in the background.
+- Added sequence transport controls: `Space` play/pause and `,` / `.` frame stepping.
 - Fixed help behavior (`-h/--help`) while keeping flop flags unchanged.
 - Added OpenEXR fallback loading and corrected dependency packaging details.
 - Added Linux-specific Qt font compatibility fixes:
