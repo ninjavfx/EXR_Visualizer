@@ -1,37 +1,15 @@
 from __future__ import annotations
 
 import os
-import sys
 
 import numpy as np
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QImage
 
 from common import fail
 
 # Helps OpenCV EXR IO on builds where this backend is opt-in.
 os.environ.setdefault("OPENCV_IO_ENABLE_OPENEXR", "1")
-
-
-def configure_linux_qt_fontdir() -> None:
-    """Avoid Qt font warnings with some OpenCV Linux wheels."""
-    if not sys.platform.startswith("linux"):
-        return
-    if os.environ.get("QT_QPA_FONTDIR"):
-        return
-
-    candidates = [
-        "/usr/share/fonts/truetype/dejavu",
-        "/usr/share/fonts/TTF",
-        "/usr/share/fonts/dejavu",
-        "/usr/share/fonts/truetype/freefont",
-        "/usr/share/fonts",
-    ]
-    for path in candidates:
-        if os.path.isdir(path):
-            os.environ["QT_QPA_FONTDIR"] = path
-            break
-
-
-configure_linux_qt_fontdir()
 
 
 try:
@@ -50,40 +28,6 @@ try:
 except Exception:  # pragma: no cover - environment-dependent
     Imath = None
     OpenEXR = None
-
-
-def bootstrap_opencv_qt_fonts() -> None:
-    """Populate cv2/qt/fonts from system fonts when OpenCV wheel lacks bundled fonts."""
-    if cv2 is None or not sys.platform.startswith("linux"):
-        return
-
-    cv2_dir = os.path.dirname(getattr(cv2, "__file__", ""))
-    if not cv2_dir:
-        return
-
-    qt_fonts_dir = os.path.join(cv2_dir, "qt", "fonts")
-    if os.path.isdir(qt_fonts_dir) and os.listdir(qt_fonts_dir):
-        return
-
-    source_fonts = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/dejavu/DejaVuSans.ttf",
-    ]
-    src_font = next((p for p in source_fonts if os.path.isfile(p)), None)
-    if not src_font:
-        return
-
-    try:
-        os.makedirs(qt_fonts_dir, exist_ok=True)
-        dst_font = os.path.join(qt_fonts_dir, "DejaVuSans.ttf")
-        if not os.path.exists(dst_font):
-            os.symlink(src_font, dst_font)
-    except OSError:
-        # Non-fatal; display may still work through system fontconfig.
-        return
-
-
-bootstrap_opencv_qt_fonts()
 
 
 def _load_exr_oiio(path: str) -> np.ndarray:
@@ -168,39 +112,25 @@ def load_exr(path: str) -> np.ndarray:
     return _ACTIVE_EXR_LOADER(path)
 
 
-def prepare_display_image(img_rgb: np.ndarray, half: bool) -> np.ndarray:
-    if cv2 is None:
-        fail("OpenCV is required for display. Install with: pip install opencv-python")
-
+def prepare_display_image(img_rgb: np.ndarray, half: bool) -> QImage:
     disp = np.clip(img_rgb, 0.0, 1.0)
+    disp = np.ascontiguousarray((disp * 255.0 + 0.5).astype(np.uint8))
+    height, width = disp.shape[:2]
+    image = QImage(disp.data, width, height, width * 3, QImage.Format_RGB888).copy()
     if half:
-        h, w = disp.shape[:2]
-        disp = cv2.resize(
-            disp,
-            (max(1, w // 2), max(1, h // 2)),
-            interpolation=cv2.INTER_AREA,
+        image = image.scaled(
+            max(1, width // 2),
+            max(1, height // 2),
+            Qt.IgnoreAspectRatio,
+            Qt.SmoothTransformation,
         )
-
-    return (disp * 255.0 + 0.5).astype(np.uint8)[:, :, ::-1]
+    return image
 
 
 def display_image(img_rgb: np.ndarray, half: bool) -> None:
-    disp_bgr = prepare_display_image(img_rgb, half)
+    from qt_viewer import display_qimage
 
-    window_name = "EXR Visualizer"
-    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
-    cv2.imshow(window_name, disp_bgr)
-
-    while True:
-        visible = cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE)
-        if visible < 1:
-            break
-
-        key = cv2.waitKeyEx(50)
-        if key in (27, 13, ord("q"), ord("Q")):
-            break
-
-    cv2.destroyAllWindows()
+    display_qimage(prepare_display_image(img_rgb, half), title="EXR Visualizer")
 
 
 def save_image(img_rgb: np.ndarray, output_path: str, half: bool) -> None:

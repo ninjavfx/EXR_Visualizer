@@ -79,18 +79,11 @@ If Finder blocks terminal GUI windows, run headless with:
 .venv/bin/python exr_view.py /path/to/image.exr --save /tmp/output.png --no-display
 ```
 
-### Linux Qt font warning (OpenCV window mode)
+### Display backend
 
-If you see:
-`QFontDatabase: Cannot find font directory .../cv2/qt/fonts`
-
-run with a system font dir:
-```bash
-QT_QPA_FONTDIR=/usr/share/fonts/truetype/dejavu python3 exr_view.py /path/to/image.exr
-```
-
-The script now auto-detects common Linux font directories and also tries to bootstrap
-`cv2/qt/fonts` from system DejaVu fonts automatically. The manual override is still available.
+Interactive display now uses Qt via `PySide6` instead of OpenCV HighGUI.
+This removes the previous Linux-specific OpenCV Qt font bootstrap path and gives
+more reliable window close and key handling for stills and sequence playback.
 
 ## Run
 

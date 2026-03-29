@@ -13,7 +13,7 @@ This project currently prioritizes practical viewing/output over framework compl
 - `exr_view.py` remains the CLI entrypoint, with implementation split across focused modules.
 - Packaging metadata is provided through `pyproject.toml` with an `exr-view` console script.
 - Tested end-to-end on 2026-03-08 with a production EXR and discovered CDL.
-- Linux viewer/font issues encountered in this session were addressed in code.
+- Interactive display now uses Qt (`PySide6`) instead of OpenCV HighGUI.
 - Sequence playback was added for EXR file patterns addressed by trailing-dot prefixes.
 - Project memory files are present: `AGENTS.md`, `TASKS.md`, `DECISIONS.md`, `.codex/session.md`.
 
@@ -24,8 +24,9 @@ This project currently prioritizes practical viewing/output over framework compl
 ### Functional blocks
 - `cli.py`: CLI argument parsing.
 - `common.py`: shared failure helper.
-- `exr_io.py`: Linux/OpenCV bootstrap, EXR loading, save/display conversion.
+- `exr_io.py`: EXR loading, save conversion, Qt display-image preparation.
 - `color_pipeline.py`: LUT config, CDL parsing/application, OCIO processing, per-frame processing.
+- `qt_viewer.py`: Qt still-image window and sequence playback window/event loop.
 - `sequence_playback.py`: sequence discovery, threaded cache state, playback loop.
 
 ### EXR loading strategy
@@ -113,6 +114,7 @@ If multiple are present, first alphabetical match is used.
 Packages in `requirements.txt`:
 - `numpy`
 - `opencv-python`
+- `PySide6`
 - `OpenColorIO`
 - `OpenImageIO`
 - `OpenEXR`
@@ -151,14 +153,9 @@ Run examples:
 .venv/bin/python exr_view.py /path/to/image.exr -X -Y --save /tmp/output.png --no-display
 ```
 
-Linux note:
-- The script auto-configures Qt font dirs (`QT_QPA_FONTDIR`) and tries to bootstrap
-  `cv2/qt/fonts` from system DejaVu fonts.
-- Candidate font directories include:
-  `/usr/share/fonts/truetype/dejavu`, `/usr/share/fonts/TTF`, `/usr/share/fonts/dejavu`,
-  `/usr/share/fonts/truetype/freefont`, `/usr/share/fonts`.
-- If `site-packages/cv2/qt/fonts` is not writable, bootstrap may be skipped; use manual
-  `QT_QPA_FONTDIR` override in that case.
+Display note:
+- Interactive display uses `PySide6` windows for both still frames and sequence playback.
+- OpenCV remains in use for EXR fallback loading and image saving.
 
 ## Verified Runtime Example
 Validated command:
@@ -184,7 +181,7 @@ Also validated `--half` save dimensions:
 - No explicit OCIO config workflow (using file transforms only).
 - No channel/layer selection for multichannel EXRs.
 - OpenEXR fallback currently expects `Imath` + `OpenEXR` Python bindings.
-- Linux Qt font bootstrap depends on write access to the installed `cv2` package path.
+- GUI display still depends on a working Qt-capable environment.
 - Sequence playback can consume substantial RAM because frames are cached after processing.
 - Sequence playback currently loops continuously until closed and does not save image sequences.
 
@@ -203,7 +200,7 @@ Also validated `--half` save dimensions:
 5. No `.ccc` case prints `CDL not found` and still renders.
 6. `--half` on/off with save output dimension checks.
 7. Display path (without `--no-display`) on a GUI-capable machine.
-8. Linux Qt font path behavior with missing `cv2/qt/fonts`.
+8. Linux/Wayland/X11 display smoke test for Qt window creation and key handling.
 9. Linux interactive move/resize with Super/Win key while viewer stays open.
 10. Sequence prefix detection with `shot.` style input.
 11. Sequence range filtering (`-range 1000..2000`).
@@ -214,6 +211,7 @@ Also validated `--half` save dimensions:
 - `cli.py`
 - `common.py`
 - `exr_io.py`
+- `qt_viewer.py`
 - `color_pipeline.py`
 - `sequence_playback.py`
 - `requirements.txt`

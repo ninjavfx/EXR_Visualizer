@@ -1,6 +1,10 @@
 # Session Summary
 
 ## What Was Done
+- Replaced OpenCV HighGUI display with a `PySide6`-based Qt viewer for still-image display and sequence playback.
+- Added `qt_viewer.py` to host the Qt application, still-image window, and timer-driven sequence viewer.
+- Kept OpenCV for image save output and as the final EXR loading fallback.
+- Updated packaging/dependencies to include `PySide6`.
 - Initialized and connected git repo to GitHub (`origin` via SSH).
 - Implemented `exr_view.py` end-to-end EXR LUT/CDL viewer pipeline.
 - Added CLI features:
@@ -25,11 +29,6 @@
 - Added shared config lookup at `~/.config/exr_visualizer/.luts` and interactive first-run copying of bundled default LUT assets into the user config directory.
 - Fixed help behavior (`-h/--help`) while keeping flop flags unchanged.
 - Added OpenEXR fallback loading and corrected dependency packaging details.
-- Added Linux-specific Qt font compatibility fixes:
-  - `QT_QPA_FONTDIR` auto-detection
-  - `cv2/qt/fonts` bootstrap from system DejaVu
-  - Arch font path candidate `/usr/share/fonts/TTF`
-  - non-exit behavior for Super/Win-key interactions in display window
 - Updated README and CODEX documentation accordingly.
 
 ## Files Changed in This Session
@@ -38,6 +37,7 @@
 - `common.py`
 - `exr_io.py`
 - `color_pipeline.py`
+- `qt_viewer.py`
 - `sequence_playback.py`
 - `pyproject.toml`
 - `README.md`
@@ -49,6 +49,7 @@
 ## Current Status
 - Tool runs and has been validated with a real EXR path in this workspace.
 - Sequence discovery/range parsing was validated locally with temporary `.exr` filenames.
+- Qt display backend was refactored in code, but no live GUI validation was run in this environment.
 - Remote `main` has recent fixes pushed.
 - No automated test suite yet.
 
@@ -56,4 +57,4 @@
 1. Add automated tests for parser/discovery/pipeline/orientation behavior.
 2. Add tests for sequence discovery, range parsing, and FPS validation.
 3. Decide whether sequence mode should support save/headless workflows.
-4. Add a Linux display smoke test that verifies font fallback, window key behavior, and sequence playback timing.
+4. Add a Qt display smoke test that verifies window creation, close keys, sequence controls, and timing.

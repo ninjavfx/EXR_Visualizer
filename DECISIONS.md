@@ -30,10 +30,9 @@
 - Decision: viewer exits only on `q`, `Esc`, `Enter`, or window close button.
 - Why: prevents accidental close on Linux Super/Win key interactions.
 
-### 2026-03-08: Linux Qt font mitigation
-- Decision: auto-set `QT_QPA_FONTDIR`, bootstrap `cv2/qt/fonts`, include Arch path `/usr/share/fonts/TTF`.
-- Why: address OpenCV Qt font warnings/errors on Linux distros.
-- Note: bootstrap is best-effort; manual `QT_QPA_FONTDIR` remains the fallback when package paths are read-only.
+### 2026-03-29: Replace OpenCV HighGUI display with PySide6
+- Decision: use `PySide6` for still-image and sequence playback windows, while keeping OpenCV for file save and as the last EXR-loading fallback.
+- Why: removes OpenCV HighGUI/Linux font issues, gives cleaner window lifecycle and key handling, and provides a better base for future viewer controls without changing the CLI contract.
 
 ### 2026-03-08: Standardize on `uv` + Python 3.11
 - Decision: recommend `uv venv --python 3.11` for environment setup.

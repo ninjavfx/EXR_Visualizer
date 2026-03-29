@@ -8,10 +8,12 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 import numpy as np
+from PySide6.QtGui import QImage
 
 from color_pipeline import build_file_processor, process_frame
 from common import fail
-from exr_io import cv2, prepare_display_image
+from exr_io import prepare_display_image
+from qt_viewer import play_sequence_qt
 
 
 @dataclass(frozen=True)
@@ -24,7 +26,7 @@ class SequenceFrame:
 @dataclass
 class SequenceCacheState:
     frames: List[SequenceFrame]
-    display_cache: List[Optional[np.ndarray]]
+    display_cache: List[Optional[QImage]]
     ready_count: int = 0
     contiguous_count: int = 0
     last_progress_reported: int = 0
@@ -231,21 +233,9 @@ def play_sequence(
     fps: float,
     state_lock: threading.Lock,
 ) -> None:
-    if cv2 is None:
-        fail("OpenCV is required for display. Install with: pip install opencv-python")
     if fps <= 0:
         fail("FPS must be greater than 0")
-
-    window_name = "EXR Visualizer"
-    frame_delay = 1.0 / fps
-
-    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
-    index = 0
-    is_playing = True
-
-    step_back_keys = {ord(","), ord("<")}
-    step_forward_keys = {ord("."), ord(">")}
-
+    start_deadline = time.perf_counter() + 60.0
     while True:
         with state_lock:
             if state.error is not None:
@@ -256,91 +246,11 @@ def play_sequence(
             break
         if done:
             fail("Sequence cache did not produce any frames")
+        if time.perf_counter() >= start_deadline:
+            fail("Timed out waiting for the first sequence frame")
+        time.sleep(0.05)
 
-        visible = cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE)
-        if visible < 1:
-            cv2.destroyAllWindows()
-            return
-        cv2.waitKeyEx(50)
-
-    next_deadline = time.perf_counter() + frame_delay
-
-    while True:
-        visible = cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE)
-        if visible < 1:
-            break
-
-        with state_lock:
-            if state.error is not None:
-                fail(state.error)
-            ready_count = state.ready_count
-            contiguous_count = state.contiguous_count
-            done = state.done
-            current = state.display_cache[index]
-            if current is None and contiguous_count > 0:
-                fallback_index = min(index, contiguous_count - 1)
-                current = state.display_cache[fallback_index]
-                index = fallback_index
-            frame_info = state.frames[index]
-
-        if current is None:
-            current = first_frame
-            index = 0
-            frame_info = state.frames[0]
-
-        cv2.imshow(window_name, current)
-        if hasattr(cv2, "setWindowTitle"):
-            suffix = ""
-            if not done:
-                suffix = f" [{ready_count}/{len(state.frames)} cached]"
-            status = "Playing" if is_playing else "Paused"
-            cv2.setWindowTitle(
-                window_name,
-                f"EXR Visualizer - {status} - frame {frame_info.frame}{suffix}",
-            )
-
-        now = time.perf_counter()
-        wait_ms = max(1, int((next_deadline - now) * 1000.0)) if is_playing else 50
-        key = cv2.waitKeyEx(wait_ms)
-        if key in (27, 13, ord("q"), ord("Q")):
-            break
-        if key == 32:
-            is_playing = not is_playing
-            next_deadline = time.perf_counter() + frame_delay
-            continue
-
-        with state_lock:
-            contiguous_count = state.contiguous_count
-            done = state.done
-
-        available_count = len(state.frames) if done else contiguous_count
-        if key in step_back_keys and available_count > 0:
-            index = (index - 1) % available_count
-            next_deadline = time.perf_counter() + frame_delay
-            continue
-        if key in step_forward_keys and available_count > 0:
-            index = (index + 1) % available_count
-            next_deadline = time.perf_counter() + frame_delay
-            continue
-
-        if not is_playing:
-            continue
-
-        with state_lock:
-            contiguous_count = state.contiguous_count
-            done = state.done
-
-        now = time.perf_counter()
-        if now >= next_deadline + frame_delay:
-            next_deadline = now + frame_delay
-        else:
-            next_deadline += frame_delay
-
-        if contiguous_count <= 0:
-            index = 0
-        elif done:
-            index = (index + 1) % len(state.frames)
-        else:
-            index = (index + 1) % contiguous_count
-
-    cv2.destroyAllWindows()
+    try:
+        play_sequence_qt(state, fps, state_lock)
+    except RuntimeError as exc:
+        fail(str(exc))
