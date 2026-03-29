@@ -1,6 +1,8 @@
 # Session Summary
 
 ## What Was Done
+- Added Qt still/sequence viewer scale shortcuts: `1` = 100%, `2` = 50%, `3` = 25%, and `Shift+1` resizes the window to the current scaled image size.
+- Kept the new scale controls in the viewer layer so they do not affect processing, save output, or the existing `--half` CLI behavior.
 - Replaced OpenCV HighGUI display with a `PySide6`-based Qt viewer for still-image display and sequence playback.
 - Added `qt_viewer.py` to host the Qt application, still-image window, and timer-driven sequence viewer.
 - Kept OpenCV for image save output and as the final EXR loading fallback.
@@ -64,6 +66,7 @@
 - A fifth follow-up change now bypasses the unstable macOS Qt sequence path entirely and uses the existing OpenCV playback loop there.
 - A short-term refactor now centralizes playback transport logic behind a shared controller to keep the backend split maintainable.
 - A follow-up fix now prevents Qt from upscaling images by default so `--half` remains visually correct.
+- A follow-up viewer change now adds interactive Qt scale presets and a resize-to-current-scale shortcut.
 - Remote `main` has recent fixes pushed.
 - No automated test suite yet.
 
@@ -71,4 +74,4 @@
 1. Add automated tests for parser/discovery/pipeline/orientation behavior.
 2. Add tests for sequence discovery, range parsing, and FPS validation.
 3. Decide whether sequence mode should support save/headless workflows.
-4. Add display smoke tests that cover the Qt still-image path, non-macOS Qt sequence path, macOS OpenCV sequence fallback, the shared playback controller behavior, and visible `--half` scaling.
+4. Add display smoke tests that cover the Qt still-image path, non-macOS Qt sequence path, macOS OpenCV sequence fallback, the shared playback controller behavior, visible `--half` scaling, and the new still-viewer scale shortcuts.

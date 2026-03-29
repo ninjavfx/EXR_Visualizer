@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from typing import Callable, Optional
 
-from PySide6.QtCore import QRect, QTimer, Qt
+from PySide6.QtCore import QRect, QSize, QTimer, Qt
 from PySide6.QtGui import QImage, QKeyEvent, QPainter
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget
 
@@ -27,10 +27,22 @@ class ImageWidget(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self._image: QImage | None = None
+        self._scale = 1.0
 
     def set_image(self, image: QImage) -> None:
         self._image = image
         self.update()
+
+    def set_scale(self, scale: float) -> None:
+        self._scale = max(0.01, float(scale))
+        self.update()
+
+    def scaled_image_size(self) -> QSize:
+        if self._image is None:
+            return QSize()
+        width = max(1, int(round(self._image.width() * self._scale)))
+        height = max(1, int(round(self._image.height() * self._scale)))
+        return QSize(width, height)
 
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
@@ -39,7 +51,7 @@ class ImageWidget(QWidget):
             return
 
         image = self._image
-        scaled_size = image.size()
+        scaled_size = self.scaled_image_size()
         if (
             scaled_size.width() > self.width()
             or scaled_size.height() > self.height()
@@ -57,7 +69,7 @@ class ImageWindow(QMainWindow):
         image: Optional[QImage] = None,
         *,
         title: str,
-        on_key: Optional[Callable[[int], bool]] = None,
+        on_key: Optional[Callable[[QKeyEvent], bool]] = None,
     ) -> None:
         super().__init__()
         self._on_key = on_key
@@ -71,12 +83,35 @@ class ImageWindow(QMainWindow):
     def set_image(self, image: QImage) -> None:
         self._image_widget.set_image(image)
 
+    def set_scale(self, scale: float) -> None:
+        self._image_widget.set_scale(scale)
+
+    def resize_to_current_scale(self) -> None:
+        target = self._image_widget.scaled_image_size()
+        if target.isEmpty():
+            return
+        chrome = self.size() - self.centralWidget().size()
+        self.resize(target + chrome)
+
     def keyPressEvent(self, event: QKeyEvent) -> None:
         key = event.key()
+        modifiers = event.modifiers()
         if key in (Qt.Key_Q, Qt.Key_Escape, Qt.Key_Return, Qt.Key_Enter):
             self.close()
             return
-        if self._on_key is not None and self._on_key(key):
+        if modifiers & Qt.ShiftModifier and key in (Qt.Key_1, Qt.Key_Exclam):
+            self.resize_to_current_scale()
+            return
+        if key == Qt.Key_1:
+            self.set_scale(1.0)
+            return
+        if key == Qt.Key_2:
+            self.set_scale(0.5)
+            return
+        if key == Qt.Key_3:
+            self.set_scale(0.25)
+            return
+        if self._on_key is not None and self._on_key(event):
             return
         super().keyPressEvent(event)
 
@@ -104,6 +139,7 @@ class SequenceWindow(ImageWindow):
         self._tick()
 
     def _handle_sequence_key(self, key: int) -> bool:
+        key = key.key()
         if key == Qt.Key_Space:
             self._controller.toggle_playback()
             self._update_title()

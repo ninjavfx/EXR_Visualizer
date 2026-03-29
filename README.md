@@ -143,6 +143,10 @@ In display mode, the window closes on:
 - `Esc`
 - `Enter`
 - Window close button
+- `1` shows the image at 100% scale (1 image pixel = 1 screen pixel)
+- `2` shows the image at 50% scale
+- `3` shows the image at 25% scale
+- `Shift+1` resizes the window to the current display scale
 
 In sequence mode:
 - `Space` toggles play/pause

@@ -40,6 +40,7 @@ This project currently prioritizes practical viewing/output over framework compl
 - macOS sequence playback uses an OpenCV HighGUI fallback instead of the Qt playback loop.
 - Sequence playback transport state is centralized in `playback_controller.py` so Qt and OpenCV backends share the same stepping/timing/title behavior.
 - The Qt viewer centers images at their prepared pixel size and only scales down when the window is smaller, so `--half` remains visually meaningful.
+- The Qt viewer also tracks an interactive display scale separate from the processed image data, with `1`/`2`/`3` presets for 100%/50%/25% and `Shift+1` to resize the top-level window to the current scaled image size.
 - `QApplication` is created on the initial main thread before starting sequence cache workers.
 - Sequence discovery now uses `os.scandir()` instead of `os.listdir()` for lower directory-scan overhead.
 
@@ -60,6 +61,7 @@ Behavior notes:
 - `--half` affects both save and display outputs.
 - `-X/-x` and `-Y/-y` affect both save and display outputs.
 - Viewer closes on `q`, `Esc`, `Enter`, or window close button (not on arbitrary keypresses).
+- In the Qt viewer, `1` sets 100% scale, `2` sets 50% scale, `3` sets 25% scale, and `Shift+1` resizes the window to the current scaled image size.
 - In sequence mode, `Space` toggles play/pause, `,` steps back one frame, and `.` steps forward one frame.
 - For non-EXR save formats: output is clamped to `[0,1]` and written as 8-bit.
 - For `.exr` save: output is written as float32.

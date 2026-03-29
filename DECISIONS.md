@@ -62,6 +62,10 @@
 - Decision: have the Qt image widget center frames at their prepared pixel size and only scale them down when the window is too small.
 - Why: preserves the intended visible effect of `--half`, which regressed when the custom Qt widget started scaling all images up to fill the window.
 
+### 2026-03-29: Add interactive Qt display scale presets instead of reprocessing images
+- Decision: implement `1`/`2`/`3` as Qt viewer display-scale presets for 100%, 50%, and 25%, and use `Shift+1` to resize the outer window to the current scaled image size.
+- Why: the request is about inspection ergonomics, not color/output changes, so the shortcut behavior should stay in the viewer layer and avoid touching the processed pixel pipeline or CLI flags such as `--half`.
+
 ### 2026-03-08: Standardize on `uv` + Python 3.11
 - Decision: recommend `uv venv --python 3.11` for environment setup.
 - Why: reproducible installs with working wheels for current dependency set.
