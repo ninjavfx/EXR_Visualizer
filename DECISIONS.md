@@ -34,6 +34,26 @@
 - Decision: use `PySide6` for still-image and sequence playback windows, while keeping OpenCV for file save and as the last EXR-loading fallback.
 - Why: removes OpenCV HighGUI/Linux font issues, gives cleaner window lifecycle and key handling, and provides a better base for future viewer controls without changing the CLI contract.
 
+### 2026-03-29: Import OpenCV lazily after the Qt display switch
+- Decision: avoid importing `cv2` on startup and only import it when saving or when the OpenCV EXR fallback loader is actually used.
+- Why: reduces the chance of macOS crashes from mixing `opencv-python` and `PySide6` Qt stacks in the same process during normal display runs.
+
+### 2026-03-29: Keep Qt image-object creation on the main thread
+- Decision: sequence worker threads cache plain RGB `uint8` NumPy arrays and the Qt viewer converts them to `QImage` on the GUI thread.
+- Why: reduces the chance of macOS Cocoa/Qt crashes during sequence playback from creating Qt image objects off the main thread.
+
+### 2026-03-29: Paint sequence frames from QImage instead of QPixmap
+- Decision: render viewer frames by painting `QImage` directly in a widget rather than converting each frame to `QPixmap`.
+- Why: `QPixmap` is more tightly coupled to native window-system resources; avoiding it reduces the macOS-specific native GUI risk in the playback path.
+
+### 2026-03-29: Create QApplication before starting sequence worker threads
+- Decision: in sequence mode, initialize `QApplication` on the main thread before launching cache worker threads.
+- Why: macOS Qt warns and can segfault if `QApplication` is first created after other threads have already started.
+
+### 2026-03-29: Use OpenCV fallback for sequence playback on macOS
+- Decision: keep Qt for still-image display, but route macOS sequence playback through the OpenCV HighGUI loop.
+- Why: repeated crashes remained in the macOS Qt/Cocoa sequence event path even after fixing worker-thread `QImage` creation, removing `QPixmap`, and correcting `QApplication` startup ordering.
+
 ### 2026-03-08: Standardize on `uv` + Python 3.11
 - Decision: recommend `uv venv --python 3.11` for environment setup.
 - Why: reproducible installs with working wheels for current dependency set.

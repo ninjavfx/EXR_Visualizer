@@ -84,6 +84,10 @@ If Finder blocks terminal GUI windows, run headless with:
 Interactive display now uses Qt via `PySide6` instead of OpenCV HighGUI.
 This removes the previous Linux-specific OpenCV Qt font bootstrap path and gives
 more reliable window close and key handling for stills and sequence playback.
+OpenCV is imported lazily now so macOS display runs do not pull in `cv2` unless
+the save path or the OpenCV EXR fallback loader is actually needed.
+On macOS, sequence playback falls back to OpenCV HighGUI because the Qt sequence
+path has been unstable there; still-image display continues to use Qt.
 
 ## Run
 

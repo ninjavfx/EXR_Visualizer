@@ -20,6 +20,7 @@ This project currently prioritizes practical viewing/output over framework compl
 ## High-Level Architecture
 ### Main entry point
 - `exr_view.py` -> `main()` orchestrates CLI, discovery, processing, save/display.
+- In sequence mode, non-macOS runs initialize `QApplication` before cache worker threads start.
 
 ### Functional blocks
 - `cli.py`: CLI argument parsing.
@@ -30,8 +31,13 @@ This project currently prioritizes practical viewing/output over framework compl
 - `sequence_playback.py`: sequence discovery, threaded cache state, playback loop.
 
 ### EXR loading strategy
-- EXR backend selection is resolved once at import time in `exr_io.py`.
+- EXR backend preference is resolved in `exr_io.py` without importing OpenCV on the normal display path.
 - Active loader preference remains: OpenImageIO, then OpenEXR bindings, then OpenCV.
+- OpenCV is imported lazily so Qt display mode avoids macOS Qt/OpenCV conflicts unless save or the OpenCV EXR fallback is actually used.
+- Sequence cache workers keep display frames as plain RGB `uint8` NumPy arrays; `QImage` creation now happens on the main Qt thread.
+- The Qt viewer paints `QImage` directly instead of converting frames to `QPixmap`.
+- macOS sequence playback uses an OpenCV HighGUI fallback instead of the Qt playback loop.
+- `QApplication` is created on the initial main thread before starting sequence cache workers.
 - Sequence discovery now uses `os.scandir()` instead of `os.listdir()` for lower directory-scan overhead.
 
 ## CLI Contract
@@ -155,7 +161,10 @@ Run examples:
 
 Display note:
 - Interactive display uses `PySide6` windows for both still frames and sequence playback.
-- OpenCV remains in use for EXR fallback loading and image saving.
+- OpenCV remains in use for image saving and as the final EXR-loading fallback, but it is imported lazily.
+- On macOS, sequence display avoids constructing Qt image objects in worker threads.
+- The viewer avoids `QPixmap` in the hot playback path to reduce native Cocoa-backed image handling.
+- On macOS, sequence playback uses an OpenCV window instead of the Qt sequence viewer.
 
 ## Verified Runtime Example
 Validated command:

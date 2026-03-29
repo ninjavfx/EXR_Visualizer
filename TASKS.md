@@ -15,8 +15,12 @@
 - Add non-interactive regression test command(s) to README for Linux/macOS.
 - Improve OpenEXR fallback robustness for channel naming edge cases beyond `R/G/B`.
 - Add explicit return codes/messages for common dependency-missing scenarios.
-- Add a small smoke-test script that validates Linux Qt font fallback behavior in display mode.
 - Add a small smoke-test script that validates Qt display startup and key handling in still and sequence modes.
+- Validate the lazy-`cv2` display path on macOS with and without `--save`.
+- Validate macOS sequence playback after moving `QImage` construction to the main thread.
+- Validate macOS sequence playback after removing `QPixmap` from the display path.
+- Validate macOS sequence playback after creating `QApplication` before starting worker threads.
+- Decide whether the macOS OpenCV sequence fallback should remain permanent or be replaced with a different native viewer backend.
 - Decide whether sequence mode should gain image-sequence export and/or headless validation behavior.
 - Validate the documented `uv pip install .` deployment flow on a clean machine.
 - Decide whether default LUT bootstrap should also expose a non-interactive install flag for setup automation.

@@ -3,9 +3,11 @@ from __future__ import annotations
 import sys
 from typing import Callable, Optional
 
-from PySide6.QtCore import QTimer, Qt
-from PySide6.QtGui import QImage, QKeyEvent, QPixmap
-from PySide6.QtWidgets import QApplication, QLabel, QMainWindow
+from PySide6.QtCore import QRect, QTimer, Qt
+from PySide6.QtGui import QImage, QKeyEvent, QPainter
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget
+
+from exr_io import qimage_from_rgb_u8
 
 
 _APP: QApplication | None = None
@@ -21,6 +23,30 @@ def ensure_app() -> QApplication:
     return app
 
 
+class ImageWidget(QWidget):
+    def __init__(self) -> None:
+        super().__init__()
+        self._image: QImage | None = None
+
+    def set_image(self, image: QImage) -> None:
+        self._image = image
+        self.update()
+
+    def paintEvent(self, event) -> None:
+        painter = QPainter(self)
+        painter.fillRect(self.rect(), Qt.black)
+        if self._image is None:
+            return
+
+        image = self._image
+        scaled_size = image.size()
+        scaled_size.scale(self.size(), Qt.KeepAspectRatio)
+        x = (self.width() - scaled_size.width()) // 2
+        y = (self.height() - scaled_size.height()) // 2
+        target = QRect(x, y, scaled_size.width(), scaled_size.height())
+        painter.drawImage(target, image)
+
+
 class ImageWindow(QMainWindow):
     def __init__(
         self,
@@ -31,17 +57,15 @@ class ImageWindow(QMainWindow):
     ) -> None:
         super().__init__()
         self._on_key = on_key
-        self._label = QLabel()
-        self._label.setAlignment(Qt.AlignCenter)
-        self.setCentralWidget(self._label)
+        self._image_widget = ImageWidget()
+        self.setCentralWidget(self._image_widget)
         self.resize(1280, 720)
         self.setWindowTitle(title)
         if image is not None:
             self.set_image(image)
 
     def set_image(self, image: QImage) -> None:
-        self._label.setPixmap(QPixmap.fromImage(image))
-        self._label.adjustSize()
+        self._image_widget.set_image(image)
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
         key = event.key()
@@ -74,7 +98,7 @@ class SequenceWindow(ImageWindow):
         self._state_lock = state_lock
         self._index = 0
         self._playing = True
-        self._first_image: QImage | None = None
+        self._first_frame = None
         self._runtime_error: str | None = None
 
         self._timer = QTimer(self)
@@ -114,7 +138,7 @@ class SequenceWindow(ImageWindow):
                 return len(self._state.frames)
             return self._state.contiguous_count
 
-    def _current_image(self) -> QImage | None:
+    def _current_frame(self):
         with self._state_lock:
             if self._state.error is not None:
                 raise RuntimeError(self._state.error)
@@ -123,10 +147,10 @@ class SequenceWindow(ImageWindow):
                 fallback_index = min(self._index, self._state.contiguous_count - 1)
                 self._index = fallback_index
                 current = self._state.display_cache[fallback_index]
-            if current is None and self._first_image is not None:
-                current = self._first_image
-            elif current is not None and self._first_image is None:
-                self._first_image = current
+            if current is None and self._first_frame is not None:
+                current = self._first_frame
+            elif current is not None and self._first_frame is None:
+                self._first_frame = current
             return current
 
     def _update_title(self) -> None:
@@ -141,21 +165,21 @@ class SequenceWindow(ImageWindow):
         self.setWindowTitle(f"EXR Visualizer - {status} - frame {frame_number}{suffix}")
 
     def _show_current_frame(self) -> None:
-        image = self._current_image()
-        if image is not None:
-            self.set_image(image)
+        frame = self._current_frame()
+        if frame is not None:
+            self.set_image(qimage_from_rgb_u8(frame))
         self._update_title()
 
     def _tick(self) -> None:
         try:
-            image = self._current_image()
+            frame = self._current_frame()
             with self._state_lock:
                 done = self._state.done
                 contiguous_count = self._state.contiguous_count
                 total = len(self._state.frames)
 
-            if image is not None:
-                self.set_image(image)
+            if frame is not None:
+                self.set_image(qimage_from_rgb_u8(frame))
             self._update_title()
 
             available_count = total if done else contiguous_count

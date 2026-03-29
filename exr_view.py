@@ -10,6 +10,7 @@ Pipeline order:
 from __future__ import annotations
 
 import os
+import sys
 import threading
 
 from cli import parse_args
@@ -23,6 +24,7 @@ from color_pipeline import (
 )
 from common import fail
 from exr_io import display_image, save_image
+from qt_viewer import ensure_app
 from sequence_playback import (
     SequenceCacheState,
     cache_sequence_frames,
@@ -77,6 +79,8 @@ def main() -> None:
             display_cache=[None] * len(frames),
         )
         state_lock = threading.Lock()
+        if sys.platform != "darwin":
+            ensure_app()
         loader = threading.Thread(
             target=cache_sequence_frames,
             args=(

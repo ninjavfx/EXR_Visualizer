@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 
 import numpy as np
-from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage
 
 from common import fail
@@ -11,11 +10,6 @@ from common import fail
 # Helps OpenCV EXR IO on builds where this backend is opt-in.
 os.environ.setdefault("OPENCV_IO_ENABLE_OPENEXR", "1")
 
-
-try:
-    import cv2
-except Exception:  # pragma: no cover - environment-dependent
-    cv2 = None
 
 try:
     import OpenImageIO as oiio  # type: ignore
@@ -28,6 +22,22 @@ try:
 except Exception:  # pragma: no cover - environment-dependent
     Imath = None
     OpenEXR = None
+
+
+_CV2 = None
+_CV2_ATTEMPTED = False
+
+
+def get_cv2():
+    global _CV2, _CV2_ATTEMPTED
+    if not _CV2_ATTEMPTED:
+        try:
+            import cv2 as imported_cv2
+        except Exception:  # pragma: no cover - environment-dependent
+            imported_cv2 = None
+        _CV2 = imported_cv2
+        _CV2_ATTEMPTED = True
+    return _CV2
 
 
 def _load_exr_oiio(path: str) -> np.ndarray:
@@ -80,6 +90,9 @@ def _load_exr_openexr(path: str) -> np.ndarray:
 
 
 def _load_exr_cv2(path: str) -> np.ndarray:
+    cv2 = get_cv2()
+    if cv2 is None:
+        fail("OpenCV is required for the EXR fallback loader. Install with: pip install opencv-python")
     img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
     if img is None:
         fail(f"Failed to open EXR with OpenCV: {path}")
@@ -95,36 +108,41 @@ if oiio is not None:
     _ACTIVE_EXR_LOADER = _load_exr_oiio
 elif OpenEXR is not None and Imath is not None:
     _ACTIVE_EXR_LOADER = _load_exr_openexr
-elif cv2 is not None:
-    _ACTIVE_EXR_LOADER = _load_exr_cv2
 else:
-    _ACTIVE_EXR_LOADER = None
+    _ACTIVE_EXR_LOADER = _load_exr_cv2
 
 
 def load_exr(path: str) -> np.ndarray:
     if not os.path.isfile(path):
         fail(f"EXR file not found: {path}")
-    if _ACTIVE_EXR_LOADER is None:
-        fail(
-            "Could not read EXR. Install OpenImageIO, OpenEXR python bindings, "
-            "or OpenCV with OpenEXR support."
-        )
-    return _ACTIVE_EXR_LOADER(path)
+    try:
+        return _ACTIVE_EXR_LOADER(path)
+    except SystemExit:
+        raise
+    except Exception as exc:
+        fail(str(exc) or "Failed to read EXR")
+
+
+def prepare_display_array(img_rgb: np.ndarray, half: bool) -> np.ndarray:
+    disp = np.clip(img_rgb, 0.0, 1.0)
+    if half:
+        disp = disp[::2, ::2]
+    return np.ascontiguousarray((disp * 255.0 + 0.5).astype(np.uint8))
+
+
+def qimage_from_rgb_u8(img_rgb_u8: np.ndarray) -> QImage:
+    height, width = img_rgb_u8.shape[:2]
+    return QImage(
+        img_rgb_u8.data,
+        width,
+        height,
+        width * 3,
+        QImage.Format_RGB888,
+    ).copy()
 
 
 def prepare_display_image(img_rgb: np.ndarray, half: bool) -> QImage:
-    disp = np.clip(img_rgb, 0.0, 1.0)
-    disp = np.ascontiguousarray((disp * 255.0 + 0.5).astype(np.uint8))
-    height, width = disp.shape[:2]
-    image = QImage(disp.data, width, height, width * 3, QImage.Format_RGB888).copy()
-    if half:
-        image = image.scaled(
-            max(1, width // 2),
-            max(1, height // 2),
-            Qt.IgnoreAspectRatio,
-            Qt.SmoothTransformation,
-        )
-    return image
+    return qimage_from_rgb_u8(prepare_display_array(img_rgb, half))
 
 
 def display_image(img_rgb: np.ndarray, half: bool) -> None:
@@ -134,6 +152,7 @@ def display_image(img_rgb: np.ndarray, half: bool) -> None:
 
 
 def save_image(img_rgb: np.ndarray, output_path: str, half: bool) -> None:
+    cv2 = get_cv2()
     if cv2 is None:
         fail("OpenCV is required for saving. Install with: pip install opencv-python")
 
