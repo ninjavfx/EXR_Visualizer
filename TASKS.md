@@ -22,6 +22,7 @@
 - Validate macOS sequence playback after creating `QApplication` before starting worker threads.
 - Decide whether the macOS OpenCV sequence fallback should remain permanent or be replaced with a different native viewer backend.
 - If the backend split persists, add tests around the shared playback controller so both backends inherit the same transport behavior.
+- Add a regression test or manual smoke-test note for `--half` display behavior in the Qt viewer.
 - Decide whether sequence mode should gain image-sequence export and/or headless validation behavior.
 - Validate the documented `uv pip install .` deployment flow on a clean machine.
 - Decide whether default LUT bootstrap should also expose a non-interactive install flag for setup automation.

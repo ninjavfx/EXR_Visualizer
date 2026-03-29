@@ -40,7 +40,11 @@ class ImageWidget(QWidget):
 
         image = self._image
         scaled_size = image.size()
-        scaled_size.scale(self.size(), Qt.KeepAspectRatio)
+        if (
+            scaled_size.width() > self.width()
+            or scaled_size.height() > self.height()
+        ):
+            scaled_size.scale(self.size(), Qt.KeepAspectRatio)
         x = (self.width() - scaled_size.width()) // 2
         y = (self.height() - scaled_size.height()) // 2
         target = QRect(x, y, scaled_size.width(), scaled_size.height())

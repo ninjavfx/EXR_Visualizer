@@ -58,6 +58,10 @@
 - Decision: move sequence transport state and timing logic into a backend-agnostic playback controller shared by the Qt and OpenCV sequence viewers.
 - Why: keeps the short-term platform split maintainable and lets future playback features land once instead of being duplicated per backend.
 
+### 2026-03-29: Do not upscale Qt display images by default
+- Decision: have the Qt image widget center frames at their prepared pixel size and only scale them down when the window is too small.
+- Why: preserves the intended visible effect of `--half`, which regressed when the custom Qt widget started scaling all images up to fill the window.
+
 ### 2026-03-08: Standardize on `uv` + Python 3.11
 - Decision: recommend `uv venv --python 3.11` for environment setup.
 - Why: reproducible installs with working wheels for current dependency set.

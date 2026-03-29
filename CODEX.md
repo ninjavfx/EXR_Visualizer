@@ -39,6 +39,7 @@ This project currently prioritizes practical viewing/output over framework compl
 - The Qt viewer paints `QImage` directly instead of converting frames to `QPixmap`.
 - macOS sequence playback uses an OpenCV HighGUI fallback instead of the Qt playback loop.
 - Sequence playback transport state is centralized in `playback_controller.py` so Qt and OpenCV backends share the same stepping/timing/title behavior.
+- The Qt viewer centers images at their prepared pixel size and only scales down when the window is smaller, so `--half` remains visually meaningful.
 - `QApplication` is created on the initial main thread before starting sequence cache workers.
 - Sequence discovery now uses `os.scandir()` instead of `os.listdir()` for lower directory-scan overhead.
 
