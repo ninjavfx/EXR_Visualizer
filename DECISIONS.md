@@ -54,6 +54,10 @@
 - Decision: keep Qt for still-image display, but route macOS sequence playback through the OpenCV HighGUI loop.
 - Why: repeated crashes remained in the macOS Qt/Cocoa sequence event path even after fixing worker-thread `QImage` creation, removing `QPixmap`, and correcting `QApplication` startup ordering.
 
+### 2026-03-29: Centralize playback transport logic behind a shared controller
+- Decision: move sequence transport state and timing logic into a backend-agnostic playback controller shared by the Qt and OpenCV sequence viewers.
+- Why: keeps the short-term platform split maintainable and lets future playback features land once instead of being duplicated per backend.
+
 ### 2026-03-08: Standardize on `uv` + Python 3.11
 - Decision: recommend `uv venv --python 3.11` for environment setup.
 - Why: reproducible installs with working wheels for current dependency set.

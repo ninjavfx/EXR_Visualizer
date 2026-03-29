@@ -87,113 +87,55 @@ def display_qimage(image: QImage, *, title: str) -> None:
 class SequenceWindow(ImageWindow):
     def __init__(
         self,
-        state,
-        fps: float,
-        state_lock,
+        controller,
         *,
         title: str,
     ) -> None:
         super().__init__(title=title, on_key=self._handle_sequence_key)
-        self._state = state
-        self._state_lock = state_lock
-        self._index = 0
-        self._playing = True
-        self._first_frame = None
-        self._runtime_error: str | None = None
+        self._controller = controller
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._tick)
-        self._timer.start(max(1, int(round(1000.0 / fps))))
+        self._timer.start(max(1, int(round(1000.0 / controller.fps))))
         self._tick()
 
     def _handle_sequence_key(self, key: int) -> bool:
         if key == Qt.Key_Space:
-            self._playing = not self._playing
+            self._controller.toggle_playback()
             self._update_title()
             return True
 
-        available_count = self._available_count()
-        if available_count <= 0:
-            return False
-
         if key in (Qt.Key_Comma, Qt.Key_Less):
-            self._playing = False
-            self._index = (self._index - 1) % available_count
+            self._controller.step(-1)
             self._show_current_frame()
             return True
 
         if key in (Qt.Key_Period, Qt.Key_Greater):
-            self._playing = False
-            self._index = (self._index + 1) % available_count
+            self._controller.step(1)
             self._show_current_frame()
             return True
 
         return False
 
-    def _available_count(self) -> int:
-        with self._state_lock:
-            if self._state.error is not None:
-                raise RuntimeError(self._state.error)
-            if self._state.done:
-                return len(self._state.frames)
-            return self._state.contiguous_count
-
-    def _current_frame(self):
-        with self._state_lock:
-            if self._state.error is not None:
-                raise RuntimeError(self._state.error)
-            current = self._state.display_cache[self._index]
-            if current is None and self._state.contiguous_count > 0:
-                fallback_index = min(self._index, self._state.contiguous_count - 1)
-                self._index = fallback_index
-                current = self._state.display_cache[fallback_index]
-            if current is None and self._first_frame is not None:
-                current = self._first_frame
-            elif current is not None and self._first_frame is None:
-                self._first_frame = current
-            return current
-
     def _update_title(self) -> None:
-        with self._state_lock:
-            ready_count = self._state.ready_count
-            done = self._state.done
-            frame_number = self._state.frames[self._index].frame
-            total = len(self._state.frames)
-
-        suffix = "" if done else f" [{ready_count}/{total} cached]"
-        status = "Playing" if self._playing else "Paused"
-        self.setWindowTitle(f"EXR Visualizer - {status} - frame {frame_number}{suffix}")
+        self.setWindowTitle(self._controller.title())
 
     def _show_current_frame(self) -> None:
-        frame = self._current_frame()
+        frame = self._controller.current_frame()
         if frame is not None:
             self.set_image(qimage_from_rgb_u8(frame))
         self._update_title()
 
     def _tick(self) -> None:
-        try:
-            frame = self._current_frame()
-            with self._state_lock:
-                done = self._state.done
-                contiguous_count = self._state.contiguous_count
-                total = len(self._state.frames)
-
-            if frame is not None:
-                self.set_image(qimage_from_rgb_u8(frame))
-            self._update_title()
-
-            available_count = total if done else contiguous_count
-            if self._playing and available_count > 0:
-                self._index = (self._index + 1) % available_count
-        except RuntimeError as exc:
-            self._runtime_error = str(exc)
-            self.close()
+        frame = self._controller.current_frame()
+        if frame is not None:
+            self.set_image(qimage_from_rgb_u8(frame))
+        self._update_title()
+        self._controller.advance_if_due()
 
 
-def play_sequence_qt(state, fps: float, state_lock) -> None:
+def play_sequence_qt(controller) -> None:
     app = ensure_app()
-    window = SequenceWindow(state, fps, state_lock, title="EXR Visualizer")
+    window = SequenceWindow(controller, title="EXR Visualizer")
     window.show()
     app.exec()
-    if window._runtime_error is not None:
-        raise RuntimeError(window._runtime_error)

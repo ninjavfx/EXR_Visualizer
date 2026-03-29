@@ -9,6 +9,7 @@
 - Replaced the Qt `QLabel`/`QPixmap` display path with direct `QImage` painting in a custom widget.
 - Changed sequence mode to create `QApplication` before starting cache worker threads.
 - Added a macOS-specific OpenCV fallback for sequence playback while keeping Qt for still-image display.
+- Added `playback_controller.py` so sequence timing, stepping, and title/status logic are shared across the Qt and OpenCV backends.
 - Updated packaging/dependencies to include `PySide6`.
 - Initialized and connected git repo to GitHub (`origin` via SSH).
 - Implemented `exr_view.py` end-to-end EXR LUT/CDL viewer pipeline.
@@ -60,6 +61,7 @@
 - A third follow-up fix now avoids `QPixmap` in the playback path to reduce Cocoa-backed image handling on macOS.
 - A fourth follow-up fix now creates `QApplication` before worker-thread startup to match macOS Qt requirements.
 - A fifth follow-up change now bypasses the unstable macOS Qt sequence path entirely and uses the existing OpenCV playback loop there.
+- A short-term refactor now centralizes playback transport logic behind a shared controller to keep the backend split maintainable.
 - Remote `main` has recent fixes pushed.
 - No automated test suite yet.
 
@@ -67,4 +69,4 @@
 1. Add automated tests for parser/discovery/pipeline/orientation behavior.
 2. Add tests for sequence discovery, range parsing, and FPS validation.
 3. Decide whether sequence mode should support save/headless workflows.
-4. Add display smoke tests that cover the Qt still-image path, non-macOS Qt sequence path, and macOS OpenCV sequence fallback.
+4. Add display smoke tests that cover the Qt still-image path, non-macOS Qt sequence path, macOS OpenCV sequence fallback, and the shared playback controller behavior.

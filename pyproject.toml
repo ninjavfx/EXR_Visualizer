@@ -27,6 +27,7 @@ py-modules = [
   "common",
   "exr_io",
   "exr_view",
+  "playback_controller",
   "qt_viewer",
   "sequence_playback",
 ]

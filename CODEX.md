@@ -27,6 +27,7 @@ This project currently prioritizes practical viewing/output over framework compl
 - `common.py`: shared failure helper.
 - `exr_io.py`: EXR loading, save conversion, Qt display-image preparation.
 - `color_pipeline.py`: LUT config, CDL parsing/application, OCIO processing, per-frame processing.
+- `playback_controller.py`: shared sequence transport/timing/title logic used by all display backends.
 - `qt_viewer.py`: Qt still-image window and sequence playback window/event loop.
 - `sequence_playback.py`: sequence discovery, threaded cache state, playback loop.
 
@@ -37,6 +38,7 @@ This project currently prioritizes practical viewing/output over framework compl
 - Sequence cache workers keep display frames as plain RGB `uint8` NumPy arrays; `QImage` creation now happens on the main Qt thread.
 - The Qt viewer paints `QImage` directly instead of converting frames to `QPixmap`.
 - macOS sequence playback uses an OpenCV HighGUI fallback instead of the Qt playback loop.
+- Sequence playback transport state is centralized in `playback_controller.py` so Qt and OpenCV backends share the same stepping/timing/title behavior.
 - `QApplication` is created on the initial main thread before starting sequence cache workers.
 - Sequence discovery now uses `os.scandir()` instead of `os.listdir()` for lower directory-scan overhead.
 
@@ -221,6 +223,7 @@ Also validated `--half` save dimensions:
 - `common.py`
 - `exr_io.py`
 - `qt_viewer.py`
+- `playback_controller.py`
 - `color_pipeline.py`
 - `sequence_playback.py`
 - `requirements.txt`

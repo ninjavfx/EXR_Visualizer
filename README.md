@@ -88,6 +88,8 @@ OpenCV is imported lazily now so macOS display runs do not pull in `cv2` unless
 the save path or the OpenCV EXR fallback loader is actually needed.
 On macOS, sequence playback falls back to OpenCV HighGUI because the Qt sequence
 path has been unstable there; still-image display continues to use Qt.
+The playback controls and title/status behavior are now shared between backends
+through a common playback controller so feature work can land once.
 
 ## Run
 
