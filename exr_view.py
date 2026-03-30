@@ -10,7 +10,6 @@ Pipeline order:
 from __future__ import annotations
 
 import os
-import sys
 import threading
 
 from cli import parse_args
@@ -79,8 +78,7 @@ def main() -> None:
             display_cache=[None] * len(frames),
         )
         state_lock = threading.Lock()
-        if sys.platform != "darwin":
-            ensure_app()
+        ensure_app()
         loader = threading.Thread(
             target=cache_sequence_frames,
             args=(
@@ -100,6 +98,8 @@ def main() -> None:
         loader.start()
 
         play_sequence(state, args.fps, state_lock)
+        state.stop_event.set()
+        loader.join(timeout=1.0)
         return
 
     in_proc = build_file_processor(in_lut)

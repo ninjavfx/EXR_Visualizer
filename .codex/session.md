@@ -75,3 +75,11 @@
 2. Add tests for sequence discovery, range parsing, and FPS validation.
 3. Decide whether sequence mode should support save/headless workflows.
 4. Add display smoke tests that cover the Qt still-image path, non-macOS Qt sequence path, macOS OpenCV sequence fallback, the shared playback controller behavior, visible `--half` scaling, and the new still-viewer scale shortcuts.
+## 2026-03-30
+- Updated viewer close-key handling so only `q` and `Esc` close still-image and sequence windows.
+- Removed `Enter`/`Return` as a close key from the Qt viewer and the macOS OpenCV sequence fallback.
+- Updated `README.md`, `CODEX.md`, and `DECISIONS.md` to match the new close-key behavior.
+- Next steps: run a GUI smoke test for still-image and sequence display key handling when a display-capable environment is available.
+- Removed the macOS OpenCV sequence fallback and restored a single Qt playback path for Linux and macOS.
+- Hardened Qt sequence playback by keeping `QApplication` startup ahead of worker threads, converting controller failures into caught runtime errors inside the Qt event loop, avoiding repeated `QImage` rebuilds for unchanged frames, and signaling cache workers to stop when the window closes.
+- Remaining follow-up: interactive macOS sequence smoke testing is still needed.

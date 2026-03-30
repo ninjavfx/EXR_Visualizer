@@ -84,12 +84,9 @@ If Finder blocks terminal GUI windows, run headless with:
 Interactive display now uses Qt via `PySide6` instead of OpenCV HighGUI.
 This removes the previous Linux-specific OpenCV Qt font bootstrap path and gives
 more reliable window close and key handling for stills and sequence playback.
-OpenCV is imported lazily now so macOS display runs do not pull in `cv2` unless
-the save path or the OpenCV EXR fallback loader is actually needed.
-On macOS, sequence playback falls back to OpenCV HighGUI because the Qt sequence
-path has been unstable there; still-image display continues to use Qt.
-The playback controls and title/status behavior are now shared between backends
-through a common playback controller so feature work can land once.
+OpenCV is imported lazily now so display runs do not pull in `cv2` unless the
+save path or the OpenCV EXR fallback loader is actually needed.
+Sequence playback now uses the same Qt viewer on Linux and macOS.
 
 ## Run
 
@@ -141,7 +138,6 @@ install them into `~/.config/exr_visualizer/` on first interactive run.
 In display mode, the window closes on:
 - `q`
 - `Esc`
-- `Enter`
 - Window close button
 - `1` shows the image at 100% scale (1 image pixel = 1 screen pixel)
 - `2` shows the image at 50% scale

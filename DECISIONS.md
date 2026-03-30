@@ -27,8 +27,8 @@
 - Why: standard CLI convention and user request.
 
 ### 2026-03-08: Display-close key policy
-- Decision: viewer exits only on `q`, `Esc`, `Enter`, or window close button.
-- Why: prevents accidental close on Linux Super/Win key interactions.
+- Decision: viewer exits only on `q`, `Esc`, or window close button.
+- Why: prevents accidental close on unrelated keypresses while still avoiding the previous Linux Super/Win-key accidental-close issue.
 
 ### 2026-03-29: Replace OpenCV HighGUI display with PySide6
 - Decision: use `PySide6` for still-image and sequence playback windows, while keeping OpenCV for file save and as the last EXR-loading fallback.
@@ -53,6 +53,10 @@
 ### 2026-03-29: Use OpenCV fallback for sequence playback on macOS
 - Decision: keep Qt for still-image display, but route macOS sequence playback through the OpenCV HighGUI loop.
 - Why: repeated crashes remained in the macOS Qt/Cocoa sequence event path even after fixing worker-thread `QImage` creation, removing `QPixmap`, and correcting `QApplication` startup ordering.
+
+### 2026-03-30: Restore a single Qt playback path across Linux and macOS
+- Decision: remove the macOS OpenCV sequence fallback and run sequence playback through the Qt viewer on all platforms.
+- Why: the remaining high-risk issues were in the Qt playback implementation itself: controller failures could escape from Qt event callbacks as process-exiting errors, the viewer rebuilt deep-copied `QImage` frames every timer tick even when the frame had not changed, and cache workers were not asked to stop when the window closed.
 
 ### 2026-03-29: Centralize playback transport logic behind a shared controller
 - Decision: move sequence transport state and timing logic into a backend-agnostic playback controller shared by the Qt and OpenCV sequence viewers.

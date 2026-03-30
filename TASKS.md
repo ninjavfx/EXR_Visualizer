@@ -17,11 +17,8 @@
 - Add explicit return codes/messages for common dependency-missing scenarios.
 - Add a small smoke-test script that validates Qt display startup and key handling in still and sequence modes.
 - Validate the lazy-`cv2` display path on macOS with and without `--save`.
-- Validate macOS sequence playback after moving `QImage` construction to the main thread.
-- Validate macOS sequence playback after removing `QPixmap` from the display path.
-- Validate macOS sequence playback after creating `QApplication` before starting worker threads.
-- Decide whether the macOS OpenCV sequence fallback should remain permanent or be replaced with a different native viewer backend.
-- If the backend split persists, add tests around the shared playback controller so both backends inherit the same transport behavior.
+- Validate macOS sequence playback after removing the OpenCV fallback and restoring the unified Qt path.
+- Add tests around the shared playback controller and Qt sequence viewer error/shutdown behavior.
 - Add a regression test or manual smoke-test note for `--half` display behavior in the Qt viewer.
 - Add a regression test or manual smoke-test note for Qt still-viewer scale shortcuts (`1`, `2`, `3`, `Shift+1`).
 - Decide whether sequence mode should gain image-sequence export and/or headless validation behavior.

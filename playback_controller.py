@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import time
 
-from common import fail
-
 
 class PlaybackController:
     def __init__(self, state, fps: float, state_lock) -> None:
         if fps <= 0:
-            fail("FPS must be greater than 0")
+            raise RuntimeError("FPS must be greater than 0")
 
         self._state = state
         self._state_lock = state_lock
@@ -28,15 +26,15 @@ class PlaybackController:
             if frame is not None:
                 return
             if done:
-                fail("Sequence cache did not produce any frames")
+                raise RuntimeError("Sequence cache did not produce any frames")
             if time.perf_counter() >= deadline:
-                fail("Timed out waiting for the first sequence frame")
+                raise RuntimeError("Timed out waiting for the first sequence frame")
             time.sleep(0.05)
 
     def current_frame(self):
         with self._state_lock:
             if self._state.error is not None:
-                fail(self._state.error)
+                raise RuntimeError(self._state.error)
             current = self._state.display_cache[self.index]
             if current is None and self._state.contiguous_count > 0:
                 fallback_index = min(self.index, self._state.contiguous_count - 1)
@@ -51,7 +49,7 @@ class PlaybackController:
     def title(self) -> str:
         with self._state_lock:
             if self._state.error is not None:
-                fail(self._state.error)
+                raise RuntimeError(self._state.error)
             ready_count = self._state.ready_count
             done = self._state.done
             frame_number = self._state.frames[self.index].frame
@@ -64,10 +62,13 @@ class PlaybackController:
     def available_count(self) -> int:
         with self._state_lock:
             if self._state.error is not None:
-                fail(self._state.error)
+                raise RuntimeError(self._state.error)
             if self._state.done:
                 return len(self._state.frames)
             return self._state.contiguous_count
+
+    def stop(self) -> None:
+        self._state.stop_event.set()
 
     def toggle_playback(self) -> None:
         self.is_playing = not self.is_playing

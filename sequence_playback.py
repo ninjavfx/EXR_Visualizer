@@ -2,16 +2,15 @@ from __future__ import annotations
 
 import os
 import queue
-import sys
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
 import numpy as np
 
 from color_pipeline import build_file_processor, process_frame
 from common import fail
-from exr_io import get_cv2, prepare_display_array
+from exr_io import prepare_display_array
 from playback_controller import PlaybackController
 from qt_viewer import play_sequence_qt
 
@@ -27,6 +26,7 @@ class SequenceFrame:
 class SequenceCacheState:
     frames: List[SequenceFrame]
     display_cache: List[Optional[np.ndarray]]
+    stop_event: threading.Event = field(default_factory=threading.Event)
     ready_count: int = 0
     contiguous_count: int = 0
     last_progress_reported: int = 0
@@ -124,14 +124,13 @@ def cache_sequence_worker(
     ccc_path: Optional[str],
     cdl_values: Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, float]],
     state_lock: threading.Lock,
-    stop_event: threading.Event,
 ) -> None:
     try:
         in_proc = build_file_processor(in_lut)
         out_proc = build_file_processor(out_lut)
         total = len(state.frames)
 
-        while not stop_event.is_set():
+        while not state.stop_event.is_set():
             try:
                 index, item = frame_queue.get_nowait()
             except queue.Empty:
@@ -178,7 +177,7 @@ def cache_sequence_worker(
         with state_lock:
             if state.error is None:
                 state.error = str(exc) or exc.__class__.__name__
-        stop_event.set()
+        state.stop_event.set()
 
 
 def cache_sequence_frames(
@@ -197,7 +196,7 @@ def cache_sequence_frames(
     for index, item in enumerate(state.frames):
         frame_queue.put((index, item))
 
-    stop_event = threading.Event()
+    state.stop_event.clear()
     worker_count = min(max(1, threads), len(state.frames))
     workers = []
     for _ in range(worker_count):
@@ -214,7 +213,6 @@ def cache_sequence_frames(
                 ccc_path,
                 cdl_values,
                 state_lock,
-                stop_event,
             ),
             daemon=True,
         )
@@ -234,55 +232,10 @@ def play_sequence(
     state_lock: threading.Lock,
 ) -> None:
     controller = PlaybackController(state, fps, state_lock)
-    controller.ensure_first_frame()
-
-    if sys.platform == "darwin":
-        play_sequence_cv2(controller)
-        return
-
-    play_sequence_qt(controller)
-
-
-def play_sequence_cv2(controller: PlaybackController) -> None:
-    cv2 = get_cv2()
-    if cv2 is None:
-        fail(
-            "OpenCV is required for macOS sequence playback fallback. "
-            "Install with: pip install opencv-python"
-        )
-
-    window_name = "EXR Visualizer"
-    step_back_keys = {ord(","), ord("<")}
-    step_forward_keys = {ord("."), ord(">")}
-
-    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
-
-    while True:
-        visible = cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE)
-        if visible < 1:
-            break
-
-        current = controller.current_frame()
-        if current is None:
-            fail("Sequence cache did not produce any frames")
-
-        cv2.imshow(window_name, current[:, :, ::-1])
-        if hasattr(cv2, "setWindowTitle"):
-            cv2.setWindowTitle(window_name, controller.title())
-
-        key = cv2.waitKeyEx(controller.wait_ms())
-        if key in (27, 13, ord("q"), ord("Q")):
-            break
-        if key == 32:
-            controller.toggle_playback()
-            continue
-        if key in step_back_keys:
-            controller.step(-1)
-            continue
-        if key in step_forward_keys:
-            controller.step(1)
-            continue
-
-        controller.advance_if_due()
-
-    cv2.destroyAllWindows()
+    try:
+        controller.ensure_first_frame()
+        play_sequence_qt(controller)
+    except RuntimeError as exc:
+        fail(str(exc))
+    finally:
+        controller.stop()

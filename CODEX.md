@@ -20,28 +20,28 @@ This project currently prioritizes practical viewing/output over framework compl
 ## High-Level Architecture
 ### Main entry point
 - `exr_view.py` -> `main()` orchestrates CLI, discovery, processing, save/display.
-- In sequence mode, non-macOS runs initialize `QApplication` before cache worker threads start.
+- In sequence mode, all platforms initialize `QApplication` before cache worker threads start.
 
 ### Functional blocks
 - `cli.py`: CLI argument parsing.
 - `common.py`: shared failure helper.
 - `exr_io.py`: EXR loading, save conversion, Qt display-image preparation.
 - `color_pipeline.py`: LUT config, CDL parsing/application, OCIO processing, per-frame processing.
-- `playback_controller.py`: shared sequence transport/timing/title logic used by all display backends.
+- `playback_controller.py`: shared sequence transport/timing/title logic for sequence playback.
 - `qt_viewer.py`: Qt still-image window and sequence playback window/event loop.
 - `sequence_playback.py`: sequence discovery, threaded cache state, playback loop.
 
 ### EXR loading strategy
 - EXR backend preference is resolved in `exr_io.py` without importing OpenCV on the normal display path.
 - Active loader preference remains: OpenImageIO, then OpenEXR bindings, then OpenCV.
-- OpenCV is imported lazily so Qt display mode avoids macOS Qt/OpenCV conflicts unless save or the OpenCV EXR fallback is actually used.
+- OpenCV is imported lazily so Qt display mode avoids Qt/OpenCV conflicts unless save or the OpenCV EXR fallback is actually used.
 - Sequence cache workers keep display frames as plain RGB `uint8` NumPy arrays; `QImage` creation now happens on the main Qt thread.
 - The Qt viewer paints `QImage` directly instead of converting frames to `QPixmap`.
-- macOS sequence playback uses an OpenCV HighGUI fallback instead of the Qt playback loop.
-- Sequence playback transport state is centralized in `playback_controller.py` so Qt and OpenCV backends share the same stepping/timing/title behavior.
+- Sequence playback transport state is centralized in `playback_controller.py` and drives the Qt playback loop on all platforms.
 - The Qt viewer centers images at their prepared pixel size and only scales down when the window is smaller, so `--half` remains visually meaningful.
 - The Qt viewer also tracks an interactive display scale separate from the processed image data, with `1`/`2`/`3` presets for 100%/50%/25% and `Shift+1` to resize the top-level window to the current scaled image size.
 - `QApplication` is created on the initial main thread before starting sequence cache workers.
+- The Qt sequence viewer catches controller/runtime errors inside the event loop, avoids rebuilding `QImage` copies when the visible frame has not changed, and stops cache workers when the window closes.
 - Sequence discovery now uses `os.scandir()` instead of `os.listdir()` for lower directory-scan overhead.
 
 ## CLI Contract
@@ -60,7 +60,7 @@ Behavior notes:
 - If `--save` and display enabled, image is both saved and shown.
 - `--half` affects both save and display outputs.
 - `-X/-x` and `-Y/-y` affect both save and display outputs.
-- Viewer closes on `q`, `Esc`, `Enter`, or window close button (not on arbitrary keypresses).
+- Viewer closes on `q`, `Esc`, or window close button (not on arbitrary keypresses).
 - In the Qt viewer, `1` sets 100% scale, `2` sets 50% scale, `3` sets 25% scale, and `Shift+1` resizes the window to the current scaled image size.
 - In sequence mode, `Space` toggles play/pause, `,` steps back one frame, and `.` steps forward one frame.
 - For non-EXR save formats: output is clamped to `[0,1]` and written as 8-bit.
@@ -167,9 +167,9 @@ Run examples:
 Display note:
 - Interactive display uses `PySide6` windows for both still frames and sequence playback.
 - OpenCV remains in use for image saving and as the final EXR-loading fallback, but it is imported lazily.
-- On macOS, sequence display avoids constructing Qt image objects in worker threads.
+- Sequence display avoids constructing Qt image objects in worker threads.
 - The viewer avoids `QPixmap` in the hot playback path to reduce native Cocoa-backed image handling.
-- On macOS, sequence playback uses an OpenCV window instead of the Qt sequence viewer.
+- Sequence playback uses the Qt viewer on macOS as well as Linux.
 
 ## Verified Runtime Example
 Validated command:
@@ -198,6 +198,7 @@ Also validated `--half` save dimensions:
 - GUI display still depends on a working Qt-capable environment.
 - Sequence playback can consume substantial RAM because frames are cached after processing.
 - Sequence playback currently loops continuously until closed and does not save image sequences.
+- macOS sequence playback has not been revalidated interactively since restoring the unified Qt path.
 
 ## Change Guidelines for Future Sessions
 - Preserve CLI backwards compatibility unless user requests changes.
