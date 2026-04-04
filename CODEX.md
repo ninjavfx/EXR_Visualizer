@@ -32,9 +32,9 @@ This project currently prioritizes practical viewing/output over framework compl
 - `sequence_playback.py`: sequence discovery, threaded cache state, playback loop.
 
 ### EXR loading strategy
-- EXR backend preference is resolved in `exr_io.py` without importing OpenCV on the normal display path.
-- Active loader preference remains: OpenImageIO, then OpenEXR bindings, then OpenCV.
-- OpenCV is imported lazily so Qt display mode avoids Qt/OpenCV conflicts unless save or the OpenCV EXR fallback is actually used.
+- EXR backend preference is resolved in `exr_io.py`.
+- Active loader preference is now: OpenImageIO, then OpenEXR bindings.
+- Saved image output is handled through OpenImageIO, including headless `--save` runs.
 - Sequence cache workers keep display frames as plain RGB `uint8` NumPy arrays; `QImage` creation now happens on the main Qt thread.
 - The Qt viewer paints `QImage` directly instead of converting frames to `QPixmap`.
 - Sequence playback transport state is centralized in `playback_controller.py` and drives the Qt playback loop on all platforms.
@@ -51,7 +51,7 @@ Current arguments:
 - `-X` or `-x`: flop image horizontally.
 - `-Y` or `-y`: flip image vertically.
 - `--save OUTPUT_PATH`: save processed result (`.png`, `.jpg`, `.exr`, etc.).
-- `--no-display`: skip OpenCV window display.
+- `--no-display`: skip interactive display.
 - `-range/--range START..END`: inclusive frame filter for sequence playback.
 - `-fps/--fps`: sequence playback rate, default `24`.
 - `-threads/--threads`: sequence cache worker threads, default `1`.
@@ -124,7 +124,6 @@ If multiple are present, first alphabetical match is used.
 ## Dependencies and Environment
 Packages in `requirements.txt`:
 - `numpy`
-- `opencv-python`
 - `PySide6`
 - `OpenColorIO`
 - `OpenImageIO`
@@ -166,7 +165,8 @@ Run examples:
 
 Display note:
 - Interactive display uses `PySide6` windows for both still frames and sequence playback.
-- OpenCV remains in use for image saving and as the final EXR-loading fallback, but it is imported lazily.
+- EXR loading uses OpenImageIO first, then the OpenEXR Python bindings.
+- Saved image output uses OpenImageIO for `.png`, `.jpg`, `.exr`, and other supported formats.
 - Sequence display avoids constructing Qt image objects in worker threads.
 - The viewer avoids `QPixmap` in the hot playback path to reduce native Cocoa-backed image handling.
 - Sequence playback uses the Qt viewer on macOS as well as Linux.
@@ -194,7 +194,7 @@ Also validated `--half` save dimensions:
 - No automated tests yet.
 - No explicit OCIO config workflow (using file transforms only).
 - No channel/layer selection for multichannel EXRs.
-- OpenEXR fallback currently expects `Imath` + `OpenEXR` Python bindings.
+- The EXR fallback currently expects `Imath` + `OpenEXR` Python bindings if OpenImageIO is unavailable.
 - GUI display still depends on a working Qt-capable environment.
 - Sequence playback can consume substantial RAM because frames are cached after processing.
 - Sequence playback currently loops continuously until closed and does not save image sequences.

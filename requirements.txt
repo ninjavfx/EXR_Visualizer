@@ -1,5 +1,4 @@
 numpy
-opencv-python
 PySide6
 OpenColorIO
 OpenImageIO

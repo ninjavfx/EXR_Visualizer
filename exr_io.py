@@ -7,9 +7,6 @@ from PySide6.QtGui import QImage
 
 from common import fail
 
-# Helps OpenCV EXR IO on builds where this backend is opt-in.
-os.environ.setdefault("OPENCV_IO_ENABLE_OPENEXR", "1")
-
 
 try:
     import OpenImageIO as oiio  # type: ignore
@@ -22,22 +19,6 @@ try:
 except Exception:  # pragma: no cover - environment-dependent
     Imath = None
     OpenEXR = None
-
-
-_CV2 = None
-_CV2_ATTEMPTED = False
-
-
-def get_cv2():
-    global _CV2, _CV2_ATTEMPTED
-    if not _CV2_ATTEMPTED:
-        try:
-            import cv2 as imported_cv2
-        except Exception:  # pragma: no cover - environment-dependent
-            imported_cv2 = None
-        _CV2 = imported_cv2
-        _CV2_ATTEMPTED = True
-    return _CV2
 
 
 def _load_exr_oiio(path: str) -> np.ndarray:
@@ -89,32 +70,22 @@ def _load_exr_openexr(path: str) -> np.ndarray:
     return np.stack([r, g, b], axis=-1).astype(np.float32, copy=False)
 
 
-def _load_exr_cv2(path: str) -> np.ndarray:
-    cv2 = get_cv2()
-    if cv2 is None:
-        fail("OpenCV is required for the EXR fallback loader. Install with: pip install opencv-python")
-    img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
-    if img is None:
-        fail(f"Failed to open EXR with OpenCV: {path}")
-    if img.ndim == 2:
-        img = np.stack([img, img, img], axis=-1)
-    if img.shape[2] < 3:
-        fail("EXR has fewer than 3 channels; RGB required")
-    img = img[:, :, :3][:, :, ::-1]
-    return img.astype(np.float32, copy=False)
-
-
 if oiio is not None:
     _ACTIVE_EXR_LOADER = _load_exr_oiio
 elif OpenEXR is not None and Imath is not None:
     _ACTIVE_EXR_LOADER = _load_exr_openexr
 else:
-    _ACTIVE_EXR_LOADER = _load_exr_cv2
+    _ACTIVE_EXR_LOADER = None
 
 
 def load_exr(path: str) -> np.ndarray:
     if not os.path.isfile(path):
         fail(f"EXR file not found: {path}")
+    if _ACTIVE_EXR_LOADER is None:
+        fail(
+            "No EXR reader backend is available. Install OpenImageIO or the "
+            "OpenEXR Python bindings."
+        )
     try:
         return _ACTIVE_EXR_LOADER(path)
     except SystemExit:
@@ -151,27 +122,61 @@ def display_image(img_rgb: np.ndarray, half: bool) -> None:
     display_qimage(prepare_display_image(img_rgb, half), title="EXR Visualizer")
 
 
-def save_image(img_rgb: np.ndarray, output_path: str, half: bool) -> None:
-    cv2 = get_cv2()
-    if cv2 is None:
-        fail("OpenCV is required for saving. Install with: pip install opencv-python")
+def _half_scale_axis(img: np.ndarray, axis: int) -> np.ndarray:
+    size = img.shape[axis]
+    target = max(1, size // 2)
+    if target == size:
+        return img
+    if target == 1:
+        return img.mean(axis=axis, keepdims=True, dtype=np.float32)
 
-    out = img_rgb
-    if half:
-        h, w = out.shape[:2]
-        out = cv2.resize(
-            out,
-            (max(1, w // 2), max(1, h // 2)),
-            interpolation=cv2.INTER_AREA,
-        )
+    trim = target * 2
+    slices = [slice(None)] * img.ndim
+    slices[axis] = slice(0, trim)
+    trimmed = img[tuple(slices)]
 
+    shape = list(trimmed.shape)
+    shape[axis] = target
+    shape.insert(axis + 1, 2)
+    reshaped = trimmed.reshape(shape)
+    return reshaped.mean(axis=axis + 1, dtype=np.float32)
+
+
+def half_scale_image(img_rgb: np.ndarray) -> np.ndarray:
+    return _half_scale_axis(_half_scale_axis(img_rgb, 0), 1)
+
+
+def _save_with_oiio(img_rgb: np.ndarray, output_path: str) -> None:
+    if oiio is None:
+        fail("OpenImageIO is required for saving. Install with: pip install OpenImageIO")
+
+    height, width = img_rgb.shape[:2]
     ext = os.path.splitext(output_path)[1].lower()
     if ext == ".exr":
-        bgr = out[:, :, ::-1].astype(np.float32, copy=False)
+        data = np.ascontiguousarray(img_rgb.astype(np.float32, copy=False))
+        spec = oiio.ImageSpec(width, height, 3, oiio.FLOAT)
     else:
-        bgr = (np.clip(out, 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8)[:, :, ::-1]
+        data = np.ascontiguousarray(
+            (np.clip(img_rgb, 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8)
+        )
+        spec = oiio.ImageSpec(width, height, 3, oiio.UINT8)
 
-    if not cv2.imwrite(output_path, bgr):
-        fail(f"Failed to save image: {output_path}")
+    out = oiio.ImageOutput.create(output_path)
+    if out is None:
+        fail(f"Failed to create output writer: {output_path}")
 
+    try:
+        if not out.open(output_path, spec):
+            fail(f"Failed to open output path for writing: {output_path}")
+        if not out.write_image(data):
+            fail(f"Failed to save image: {output_path}")
+    finally:
+        out.close()
+
+
+def save_image(img_rgb: np.ndarray, output_path: str, half: bool) -> None:
+    out = img_rgb
+    if half:
+        out = half_scale_image(out)
+    _save_with_oiio(out, output_path)
     print(f"Saved image: {output_path}")

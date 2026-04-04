@@ -1,5 +1,13 @@
 # Session Summary
 
+## 2026-04-04
+- Removed `opencv-python` from the runtime dependency set.
+- Removed the remaining OpenCV EXR loader fallback and save path from `exr_io.py`.
+- Kept EXR reading on OpenImageIO first with OpenEXR bindings as the fallback.
+- Replaced save-time half scaling with NumPy-based averaging and routed file output through OpenImageIO.
+- Updated `README.md`, `CODEX.md`, `DECISIONS.md`, `TASKS.md`, `requirements.txt`, and `pyproject.toml` to match the new dependency surface.
+- Next steps: run a headless `--save ... --no-display` smoke test for `.png` and `.exr` output in an environment with OpenImageIO available.
+
 ## What Was Done
 - Added Qt still/sequence viewer scale shortcuts: `1` = 100%, `2` = 50%, `3` = 25%, and `Shift+1` resizes the window to the current scaled image size.
 - Kept the new scale controls in the viewer layer so they do not affect processing, save output, or the existing `--half` CLI behavior.

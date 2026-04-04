@@ -58,6 +58,10 @@
 - Decision: remove the macOS OpenCV sequence fallback and run sequence playback through the Qt viewer on all platforms.
 - Why: the remaining high-risk issues were in the Qt playback implementation itself: controller failures could escape from Qt event callbacks as process-exiting errors, the viewer rebuilt deep-copied `QImage` frames every timer tick even when the frame had not changed, and cache workers were not asked to stop when the window closed.
 
+### 2026-04-04: Remove OpenCV from the runtime dependency set
+- Decision: drop the remaining OpenCV EXR-loader fallback and save path, keeping EXR I/O on OpenImageIO with OpenEXR bindings as the read fallback.
+- Why: OpenCV was no longer used for display, and keeping it only for an extra read fallback plus save output added a large dependency and stale Qt/OpenCV coupling risk without enough value.
+
 ### 2026-03-29: Centralize playback transport logic behind a shared controller
 - Decision: move sequence transport state and timing logic into a backend-agnostic playback controller shared by the Qt and OpenCV sequence viewers.
 - Why: keeps the short-term platform split maintainable and lets future playback features land once instead of being duplicated per backend.
