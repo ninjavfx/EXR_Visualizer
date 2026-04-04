@@ -13,7 +13,8 @@ This project currently prioritizes practical viewing/output over framework compl
 - `exr_view.py` remains the CLI entrypoint, with implementation split across focused modules.
 - Packaging metadata is provided through `pyproject.toml` with an `exr-view` console script.
 - Tested end-to-end on 2026-03-08 with a production EXR and discovered CDL.
-- Interactive display now uses Qt (`PySide6`) instead of OpenCV HighGUI.
+- Interactive display now uses Qt (`PySide6`) for stills and sequence playback.
+- OpenCV has been removed from the runtime dependency set.
 - Sequence playback was added for EXR file patterns addressed by trailing-dot prefixes.
 - Project memory files are present: `AGENTS.md`, `TASKS.md`, `DECISIONS.md`, `.codex/session.md`.
 
@@ -40,6 +41,7 @@ This project currently prioritizes practical viewing/output over framework compl
 - Sequence playback transport state is centralized in `playback_controller.py` and drives the Qt playback loop on all platforms.
 - The Qt viewer centers images at their prepared pixel size and only scales down when the window is smaller, so `--half` remains visually meaningful.
 - The Qt viewer also tracks an interactive display scale separate from the processed image data, with `1`/`2`/`3` presets for 100%/50%/25% and `Shift+1` to resize the top-level window to the current scaled image size.
+- The sequence viewer adds `Home` and `End` shortcuts that jump to the first and last currently available cached frames.
 - `QApplication` is created on the initial main thread before starting sequence cache workers.
 - The Qt sequence viewer catches controller/runtime errors inside the event loop, avoids rebuilding `QImage` copies when the visible frame has not changed, and stops cache workers when the window closes.
 - Sequence discovery now uses `os.scandir()` instead of `os.listdir()` for lower directory-scan overhead.
@@ -197,6 +199,7 @@ Also validated `--half` save dimensions:
 - No channel/layer selection for multichannel EXRs.
 - The EXR fallback currently expects `Imath` + `OpenEXR` Python bindings if OpenImageIO is unavailable.
 - GUI display still depends on a working Qt-capable environment.
+- Headless save behavior through OpenImageIO should be re-smoke-tested against real `.png` and `.exr` outputs after the OpenCV removal.
 - Sequence playback can consume substantial RAM because frames are cached after processing.
 - Sequence playback currently loops continuously until closed and does not save image sequences.
 - macOS sequence playback has not been revalidated interactively since restoring the unified Qt path.

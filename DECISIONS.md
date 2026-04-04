@@ -21,6 +21,7 @@
 ### 2026-03-08: EXR load fallback order
 - Decision: load EXR via OpenImageIO first, then OpenEXR bindings, then OpenCV.
 - Why: maximize portability and reliability across Linux/macOS setups.
+- Status: superseded on 2026-04-04; OpenCV fallback was removed from runtime dependencies.
 
 ### 2026-03-08: Keep `-h/--help` as help
 - Decision: do not repurpose `-h`; horizontal flop stays `-X/-x`.
@@ -33,10 +34,12 @@
 ### 2026-03-29: Replace OpenCV HighGUI display with PySide6
 - Decision: use `PySide6` for still-image and sequence playback windows, while keeping OpenCV for file save and as the last EXR-loading fallback.
 - Why: removes OpenCV HighGUI/Linux font issues, gives cleaner window lifecycle and key handling, and provides a better base for future viewer controls without changing the CLI contract.
+- Status: partially superseded on 2026-04-04; the Qt viewer remains, but OpenCV save/load fallback was removed.
 
 ### 2026-03-29: Import OpenCV lazily after the Qt display switch
 - Decision: avoid importing `cv2` on startup and only import it when saving or when the OpenCV EXR fallback loader is actually used.
 - Why: reduces the chance of macOS crashes from mixing `opencv-python` and `PySide6` Qt stacks in the same process during normal display runs.
+- Status: superseded on 2026-04-04; OpenCV is no longer part of the runtime path.
 
 ### 2026-03-29: Keep Qt image-object creation on the main thread
 - Decision: sequence worker threads cache plain RGB `uint8` NumPy arrays and the Qt viewer converts them to `QImage` on the GUI thread.
@@ -53,6 +56,7 @@
 ### 2026-03-29: Use OpenCV fallback for sequence playback on macOS
 - Decision: keep Qt for still-image display, but route macOS sequence playback through the OpenCV HighGUI loop.
 - Why: repeated crashes remained in the macOS Qt/Cocoa sequence event path even after fixing worker-thread `QImage` creation, removing `QPixmap`, and correcting `QApplication` startup ordering.
+- Status: superseded on 2026-03-30 by the unified Qt playback path.
 
 ### 2026-03-30: Restore a single Qt playback path across Linux and macOS
 - Decision: remove the macOS OpenCV sequence fallback and run sequence playback through the Qt viewer on all platforms.
@@ -65,6 +69,7 @@
 ### 2026-03-29: Centralize playback transport logic behind a shared controller
 - Decision: move sequence transport state and timing logic into a backend-agnostic playback controller shared by the Qt and OpenCV sequence viewers.
 - Why: keeps the short-term platform split maintainable and lets future playback features land once instead of being duplicated per backend.
+- Status: the controller remains in use, but the active viewer backend is now Qt-only.
 
 ### 2026-03-29: Do not upscale Qt display images by default
 - Decision: have the Qt image widget center frames at their prepared pixel size and only scale them down when the window is too small.

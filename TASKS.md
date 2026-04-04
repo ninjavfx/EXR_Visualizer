@@ -16,6 +16,7 @@
 - Improve OpenEXR fallback robustness for channel naming edge cases beyond `R/G/B`.
 - Add explicit return codes/messages for common dependency-missing scenarios.
 - Add a small smoke-test script that validates Qt display startup and key handling in still and sequence modes.
+- Re-run a real headless save smoke test for `.png` and `.exr` outputs after the OpenCV removal.
 - Validate macOS sequence playback after removing the OpenCV fallback and restoring the unified Qt path.
 - Add tests around the shared playback controller and Qt sequence viewer error/shutdown behavior.
 - Add a regression test or manual smoke-test note for `--half` display behavior in the Qt viewer.
@@ -30,6 +31,9 @@
 - Add optional output color metadata/report in stdout.
 
 ## Done Recently (Not TODO)
+- Removed `opencv-python` from the runtime dependency set.
+- Switched save output and save-time half scaling to an OpenImageIO + NumPy path.
+- Added sequence `Home` / `End` shortcuts for jump-to-start and jump-to-end navigation.
 - Added save/headless mode (`--save`, `--no-display`).
 - Added orientation flags (`-X/-x`, `-Y/-y`).
 - Added EXR sequence playback with `shot.` prefix detection, `-range`, `-fps`, and in-memory frame caching.
