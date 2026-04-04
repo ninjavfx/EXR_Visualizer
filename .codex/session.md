@@ -5,6 +5,7 @@
 - Removed the remaining OpenCV EXR loader fallback and save path from `exr_io.py`.
 - Kept EXR reading on OpenImageIO first with OpenEXR bindings as the fallback.
 - Replaced save-time half scaling with NumPy-based averaging and routed file output through OpenImageIO.
+- Added `Home` and `End` sequence shortcuts to jump to the first and last currently available cached frames.
 - Updated `README.md`, `CODEX.md`, `DECISIONS.md`, `TASKS.md`, `requirements.txt`, and `pyproject.toml` to match the new dependency surface.
 - Next steps: run a headless `--save ... --no-display` smoke test for `.png` and `.exr` output in an environment with OpenImageIO available.
 

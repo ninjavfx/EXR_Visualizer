@@ -158,6 +158,16 @@ class SequenceWindow(ImageWindow):
             self._show_current_frame()
             return True
 
+        if key == Qt.Key_Home:
+            self._controller.jump_to_start()
+            self._show_current_frame()
+            return True
+
+        if key == Qt.Key_End:
+            self._controller.jump_to_end()
+            self._show_current_frame()
+            return True
+
         return False
 
     def _update_title(self) -> None:

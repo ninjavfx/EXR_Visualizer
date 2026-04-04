@@ -63,6 +63,7 @@ Behavior notes:
 - Viewer closes on `q`, `Esc`, or window close button (not on arbitrary keypresses).
 - In the Qt viewer, `1` sets 100% scale, `2` sets 50% scale, `3` sets 25% scale, and `Shift+1` resizes the window to the current scaled image size.
 - In sequence mode, `Space` toggles play/pause, `,` steps back one frame, and `.` steps forward one frame.
+- In sequence mode, `Home` jumps to the first available frame and `End` jumps to the last available frame.
 - For non-EXR save formats: output is clamped to `[0,1]` and written as 8-bit.
 - For `.exr` save: output is written as float32.
 - Sequence mode is triggered when `exr_path` ends with `.` and does not point to an existing file.

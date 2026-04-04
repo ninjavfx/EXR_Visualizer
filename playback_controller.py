@@ -82,6 +82,21 @@ class PlaybackController:
         self.index = (self.index + delta) % available_count
         self.next_deadline = time.perf_counter() + self.frame_delay
 
+    def jump_to_start(self) -> None:
+        if self.available_count() <= 0:
+            return
+        self.is_playing = False
+        self.index = 0
+        self.next_deadline = time.perf_counter() + self.frame_delay
+
+    def jump_to_end(self) -> None:
+        available_count = self.available_count()
+        if available_count <= 0:
+            return
+        self.is_playing = False
+        self.index = available_count - 1
+        self.next_deadline = time.perf_counter() + self.frame_delay
+
     def wait_ms(self) -> int:
         if not self.is_playing:
             return 50

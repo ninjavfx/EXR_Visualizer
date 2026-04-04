@@ -148,3 +148,5 @@ In sequence mode:
 - `Space` toggles play/pause
 - `,` steps back one frame
 - `.` steps forward one frame
+- `Home` jumps to the first available frame
+- `End` jumps to the last available frame

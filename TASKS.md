@@ -20,6 +20,7 @@
 - Add tests around the shared playback controller and Qt sequence viewer error/shutdown behavior.
 - Add a regression test or manual smoke-test note for `--half` display behavior in the Qt viewer.
 - Add a regression test or manual smoke-test note for Qt still-viewer scale shortcuts (`1`, `2`, `3`, `Shift+1`).
+- Add a regression test or manual smoke-test note for sequence `Home`/`End` jump shortcuts.
 - Add regression tests for OpenImageIO-based save output and NumPy half-scale downsampling.
 - Decide whether sequence mode should gain image-sequence export and/or headless validation behavior.
 - Validate the documented `uv pip install .` deployment flow on a clean machine.
